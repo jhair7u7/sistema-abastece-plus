@@ -1,0 +1,234 @@
+.how-page{
+    min-height:calc(100vh - 80px);
+    width:100%;
+    background:linear-gradient(135deg,#fff4ee,#f8f6f4,#eefaf7);
+    display:flex;
+    align-items:center;
+    padding:45px 0;
+    box-sizing:border-box;
+}
+
+
+.how-container{
+    max-width:1200px;
+    width:100%;
+    margin:auto;
+    padding:0 25px;
+}
+
+
+/* HEADER */
+
+.how-header{
+    text-align:center;
+    margin-bottom:50px;
+}
+
+
+.how-header h1 {
+
+    font-size:40px;
+    font-weight:800;
+    color:#111827;
+    margin-bottom:15px;
+
+}
+
+
+.how-header p {
+
+    font-size:17px;
+    color:#475569;
+
+}
+
+
+
+/* CONTENEDOR */
+
+.process-grid {
+
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    position:relative;
+    gap:20px;
+
+}
+
+
+/* LINEA */
+
+.process-line {
+
+    position:absolute;
+
+    height:4px;
+
+    background:
+
+    linear-gradient(
+        90deg,
+        #6627b8,
+        #20b8ad,
+        #ed4890
+    );
+
+
+    left:10%;
+    right:10%;
+
+    top:145px;
+
+    border-radius:20px;
+
+}
+
+
+
+/* CARD */
+
+.process-card {
+
+    text-align:center;
+    z-index:2;
+
+}
+
+
+
+/* IMAGEN */
+
+.process-image {
+
+
+    width:170px;
+    height:170px;
+
+    margin:auto;
+
+    background:transparent;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+
+}
+
+
+.process-image img {
+
+    width:160px;
+    height:160px;
+
+    object-fit:contain;
+
+}
+
+
+
+/* NUMERO */
+
+.process-number {
+
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+
+    width:34px;
+    height:34px;
+
+
+    margin:-5px auto 15px;
+
+
+    background:#ff7a18;
+
+    color:white;
+
+
+    font-size:14px;
+
+    font-weight:800;
+
+
+    border-radius:50%;
+
+
+}
+
+
+
+/* TEXTO */
+
+
+.process-card h3 {
+
+    font-size:20px;
+
+    font-weight:800;
+
+    color:#111827;
+
+    margin-bottom:10px;
+
+}
+
+
+
+.process-card p {
+
+
+    max-width:230px;
+
+    margin:auto;
+
+    color:#64748b;
+
+    font-size:15px;
+
+    line-height:1.5;
+
+
+}
+
+
+
+/* RESPONSIVE */
+
+
+@media(max-width:900px){
+
+
+.process-grid {
+
+    grid-template-columns:1fr 1fr;
+
+}
+
+
+.process-line {
+
+    display:none;
+
+}
+
+
+}
+
+
+
+@media(max-width:600px){
+
+
+.process-grid {
+
+    grid-template-columns:1fr;
+
+}
+
+
+}

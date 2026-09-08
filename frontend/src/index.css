@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+  --primary: #5B21B6;
+  --primary-light: #7C3AED;
+  --accent-pink: #EC4899;
+  --accent-orange: #F97316;
+  --support-teal: #14B8A6;
+  --text-dark: #0F172A;
+  --bg-light: #F8FAFC;
+  --bg-white: #FFFFFF;
+  --gradient-hero: linear-gradient(135deg, #FFF0F5 0%, #E0F2FE 100%);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--text-dark); }
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+/* Botones estilo píldora */
+.btn { padding: 14px 28px; border-radius: 50px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s; text-align: center; display: inline-block; }
+.btn:hover { opacity: 0.9; transform: translateY(-2px); }
+.btn-primary { background-color: var(--primary); color: white; }
+.btn-pink { background-color: var(--accent-pink); color: white; }
+.btn-orange { background-color: var(--accent-orange); color: white; }
+.btn-dark { background-color: var(--text-dark); color: white; }
+.w-100 { width: 100%; }
+
+/* Estilos específicos para la línea de "Cómo Funciona" */
+.steps-container { position: relative; display: flex; justify-content: space-between; text-align: center; margin-top: 40px; }
+.steps-line { position: absolute; top: 30%; left: 10%; right: 10%; height: 6px; background: linear-gradient(to right, var(--primary), var(--support-teal), var(--accent-pink)); z-index: 0; border-radius: 10px; }
+.step-item { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; }

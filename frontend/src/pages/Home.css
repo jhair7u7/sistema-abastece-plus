@@ -1,0 +1,436 @@
+.home {
+    overflow: hidden;
+}
+
+
+
+/* HERO */
+
+
+.hero{
+    min-height:calc(100vh - 80px);
+    background:linear-gradient(135deg,#fff0f5,#e0f2fe);
+    display:flex;
+    align-items:center;
+    padding:25px 0 55px;
+    box-sizing:border-box;
+}
+
+.hero-container{
+    max-width:1200px;
+    width:100%;
+    margin:auto;
+    padding:0 25px;
+    display:flex;
+    align-items:center;
+    gap:60px;
+}
+
+.hero-content {
+    flex: 1;
+}
+
+.hero-content h1 {
+
+    font-size: 4rem;
+
+    line-height: 1.05;
+
+    font-weight: 800;
+
+    color: #0F172A;
+
+}
+
+
+.hero-content h1 span {
+
+    color: #5B21B6;
+
+}
+
+
+
+.hero-content p {
+
+
+    margin-top: 25px;
+
+    font-size: 20px;
+
+    color: #475569;
+
+    max-width: 480px;
+
+}
+
+
+
+/* BOTONES */
+
+
+.hero-buttons {
+
+    margin-top: 40px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 15px;
+
+    width: 320px;
+
+}
+
+
+
+.btn-primary,
+.btn-secondary {
+
+
+    padding: 16px 25px;
+
+    border-radius: 50px;
+
+    text-align: center;
+
+    text-decoration: none;
+
+    font-weight: 700;
+
+}
+
+
+
+.btn-primary {
+
+    background: #EC4899;
+
+    color: white;
+
+}
+
+
+
+.btn-secondary {
+
+    background: #F97316;
+
+    color: white;
+
+}
+
+
+
+
+
+
+/* IMAGEN */
+
+
+.hero-image {
+
+    flex: 1;
+
+    position: relative;
+
+}
+
+
+
+.main-image {
+
+
+    width: 100%;
+
+    height: 430px;
+
+    object-fit: cover;
+
+    border-radius: 25px;
+
+    box-shadow:
+
+        0 25px 60px rgba(0, 0, 0, .15);
+
+}
+
+
+
+
+
+/* DASHBOARD */
+
+
+.dashboard-preview {
+
+
+    position: absolute;
+
+    bottom: -100px;
+
+    left: -60px;
+
+
+    width: 85%;
+
+
+    background: white;
+
+    border-radius: 20px;
+
+    padding: 20px;
+
+
+    box-shadow:
+
+        0 20px 50px rgba(0, 0, 0, .18);
+
+
+}
+
+
+
+.dashboard-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+
+}
+
+
+
+.dashboard-header span {
+
+    color: #5B21B6;
+
+    font-weight: 700;
+
+}
+
+
+
+.dashboard-cards {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 15px;
+
+}
+
+
+
+.dashboard-cards div {
+
+
+    background: #F8FAFC;
+
+    padding: 15px;
+
+    border-radius: 15px;
+
+
+}
+
+
+
+.dashboard-cards small {
+
+    display: block;
+
+    color: #64748B;
+
+}
+
+
+.dashboard-cards b {
+
+    font-size: 22px;
+
+}
+
+
+
+
+
+/* STEPS */
+
+
+.steps-section {
+
+
+    max-width: 1200px;
+
+    margin: auto;
+
+    padding: 100px 25px;
+
+
+}
+
+
+
+.steps-section h2 {
+
+
+    text-align: center;
+
+    font-size: 40px;
+
+}
+
+
+
+.section-description {
+
+
+    text-align: center;
+
+    color: #64748B;
+
+    margin: 15px 0 50px;
+
+
+}
+
+
+
+
+.steps-container {
+
+
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 25px;
+
+
+}
+
+
+
+
+.step-card {
+
+
+    text-align: center;
+
+}
+
+
+
+.step-image {
+
+
+    width: 140px;
+
+    height: 140px;
+
+    margin: auto;
+
+    background: #F8FAFC;
+
+    border-radius: 50%;
+
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+
+.step-image img {
+
+
+    width: 90px;
+
+}
+
+
+
+
+
+.step-number {
+
+
+    display: inline-flex;
+
+    margin-top: -20px;
+
+    background: #F97316;
+
+    color: white;
+
+    width: 40px;
+
+    height: 40px;
+
+    border-radius: 50%;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: 800;
+
+}
+
+
+
+.step-card h3 {
+
+    margin-top: 15px;
+
+}
+
+
+
+.step-card p {
+
+    color: #64748B;
+
+}
+
+
+
+
+
+@media(max-width:900px) {
+
+
+    .hero-container {
+
+        flex-direction: column;
+
+    }
+
+
+
+    .hero-content h1 {
+
+        font-size: 3rem;
+
+    }
+
+
+
+    .steps-container {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+
+}
