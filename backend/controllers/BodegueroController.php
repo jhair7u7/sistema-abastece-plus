@@ -12,9 +12,7 @@ class BodegueroController
         $this->bodeguero = new Bodeguero($conexion);
     }
 
-    // =====================================================
-    // REGISTRAR BODEGUERO
-    // =====================================================
+    // -- REGISTRAR BODEGUERO
 
     public function registrar($datos)
     {
@@ -115,9 +113,7 @@ class BodegueroController
         ], 500);
     }
 
-    // =====================================================
-    // LOGIN BODEGUERO
-    // =====================================================
+    // -- LOGIN BODEGUERO
 
     public function login($datos)
     {
@@ -181,9 +177,7 @@ class BodegueroController
         ], 200);
     }
 
-    // =====================================================
-    // LISTAR BODEGUEROS
-    // =====================================================
+    // -- LISTAR BODEGUEROS
 
     public function listar()
     {
@@ -200,9 +194,7 @@ class BodegueroController
         ], 200);
     }
 
-    // =====================================================
-    // BUSCAR BODEGUERO
-    // =====================================================
+    // -- BUSCAR BODEGUERO
 
     public function buscar($id)
     {
@@ -233,9 +225,7 @@ class BodegueroController
         ], 200);
     }
 
-    // =====================================================
-    // ACTUALIZAR BODEGUERO
-    // =====================================================
+    // -- ACTUALIZAR BODEGUERO
 
     public function actualizar($id, $datos)
     {
@@ -346,9 +336,7 @@ class BodegueroController
         ], 500);
     }
 
-    // =====================================================
-    // BLOQUEAR BODEGUERO
-    // =====================================================
+    // -- BLOQUEAR BODEGUERO
 
     public function bloquear($id)
     {
