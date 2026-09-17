@@ -57,8 +57,7 @@ class ProductoController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "ADMINISTRADOR"
         ]);
 
         $datos = json_decode(file_get_contents("php://input"), true);
@@ -126,8 +125,7 @@ class ProductoController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "ADMINISTRADOR"
         ]);
 
         $producto = $this->producto->buscarPorId($id);
