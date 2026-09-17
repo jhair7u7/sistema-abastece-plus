@@ -102,7 +102,7 @@ class AuthMiddleware
         $payload = [
             "id" => $bodeguero["bodeguero_id"],
             "correo" => $bodeguero["correo"],
-            "tipo_usuario" => "BODEGUERO",
+            "rol" => "BODEGUERO",
             "exp" => time() + (60 * 60 * 8)
         ];
 

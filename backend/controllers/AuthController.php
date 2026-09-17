@@ -1,20 +1,22 @@
 <?php
 
 require_once __DIR__ . "/../models/Usuario.php";
+require_once __DIR__ . "/../models/Bodeguero.php";
 require_once __DIR__ . "/../middleware/AuthMiddleware.php";
 
 class AuthController
 {
     private $usuario;
+    private $bodeguero;
 
     public function __construct($conexion)
     {
         $this->usuario = new Usuario($conexion);
+        $this->bodeguero = new Bodeguero($conexion);
     }
 
-    public function login($datos)
+    public function loginAdmin($datos)
     {
-        // Verificar que se hayan enviado usuario y contraseña
         if (!isset($datos["usuario"]) || !isset($datos["password"])) {
             Response::json([
                 "mensaje" => "Usuario y contraseña son obligatorios"
@@ -25,10 +27,8 @@ class AuthController
         $usuarioLogin = trim($datos["usuario"]);
         $password = $datos["password"];
 
-        // Buscar usuario por correo
         $usuario = $this->usuario->buscarPorCorreo($usuarioLogin);
 
-        // Si no existe
         if (!$usuario) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
@@ -36,10 +36,8 @@ class AuthController
             return;
         }
 
-        // Convertir la contraseña ingresada a SHA-256
         $passwordHash = hash("sha256", $password);
 
-        // Comparar con el hash almacenado en la BD
         if (!hash_equals($usuario["password_hash"], $passwordHash)) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
@@ -47,7 +45,6 @@ class AuthController
             return;
         }
 
-        // Login correcto
         $token = AuthMiddleware::crearToken($usuario);
         Response::json([
             "mensaje" => "Inicio de sesión exitoso",
@@ -63,9 +60,72 @@ class AuthController
         ], 200);
     }
 
+    public function loginCliente($datos)
+    {
+        if (!isset($datos["usuario"]) || !isset($datos["password"])) {
+            Response::json([
+                "mensaje" => "Usuario y contraseña son obligatorios"
+            ], 400);
+            return;
+        }
+
+        $correo = trim($datos["usuario"]);
+        $password = $datos["password"];
+
+        $bodeguero = $this->bodeguero->buscarPorCorreo($correo);
+
+        if (!$bodeguero) {
+            Response::json([
+                "mensaje" => "Usuario o contraseña incorrectos"
+            ], 401);
+            return;
+        }
+
+        $passwordHash = hash("sha256", $password);
+
+        if (!hash_equals($bodeguero["password_hash"], $passwordHash)) {
+            Response::json([
+                "mensaje" => "Usuario o contraseña incorrectos"
+            ], 401);
+            return;
+        }
+
+        if ($bodeguero["estado_cuenta"] === "BLOQUEADO") {
+            Response::json([
+                "mensaje" => "La cuenta del bodeguero está bloqueada"
+            ], 403);
+            return;
+        }
+
+        $token = AuthMiddleware::crearTokenBodeguero($bodeguero);
+
+        Response::json([
+            "mensaje" => "Inicio de sesión exitoso",
+            "token" => $token,
+            "bodeguero" => [
+                "id" => $bodeguero["bodeguero_id"],
+                "nombre" => $bodeguero["nombre"],
+                "apellidos" => $bodeguero["apellidos"],
+                "correo" => $bodeguero["correo"],
+                "telefono" => $bodeguero["telefono"],
+                "ruc" => $bodeguero["ruc"],
+                "tipo_establecimiento" => $bodeguero["tipo_establecimiento"],
+                "nombre_comercial" => $bodeguero["nombre_comercial"],
+                "razon_social" => $bodeguero["razon_social"],
+                "estado_cuenta" => $bodeguero["estado_cuenta"],
+                "linea_credito_max" => $bodeguero["linea_credito_max"],
+                "credito_utilizado" => $bodeguero["credito_utilizado"]
+            ]
+        ], 200);
+    }
+
+    public function login($datos)
+    {
+        $this->loginAdmin($datos);
+    }
+
     public function registrar($datos)
     {
-        // Verificar campos obligatorios
         if (
             !isset($datos["nombre"]) ||
             !isset($datos["apellidos"]) ||

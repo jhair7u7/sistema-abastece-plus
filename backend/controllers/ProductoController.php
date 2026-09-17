@@ -19,7 +19,8 @@ class ProductoController
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
             "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "BODEGUERO"
         ]);
 
         $productos = $this->producto->listar();
@@ -35,7 +36,8 @@ class ProductoController
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
             "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "BODEGUERO"
         ]);
 
         $producto = $this->producto->buscarPorId($id);

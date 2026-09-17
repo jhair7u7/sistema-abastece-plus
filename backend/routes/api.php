@@ -19,10 +19,31 @@ $bodegueroController = new BodegueroController($conexion);
 $accion = isset($_GET["accion"]) ? $_GET["accion"] : "";
 
 
-// -- LOGIN USUARIO INTERNO
+// -- LOGIN USUARIO INTERNO (DEDICADO)
+
+if ($metodo === "POST" && $accion === "login_admin") {
+    $authController->loginAdmin($datos);
+    exit;
+}
+
+
+// -- LOGIN CLIENTE / BODEGUERO (DEDICADO)
+
+if ($metodo === "POST" && $accion === "login_cliente") {
+    $authController->loginCliente($datos);
+    exit;
+}
+
+
+// -- ALIAS RETROCOMPATIBLES
 
 if ($metodo === "POST" && $accion === "login") {
-    $authController->login($datos);
+    $authController->loginAdmin($datos);
+    exit;
+}
+
+if ($metodo === "POST" && $accion === "login_bodeguero") {
+    $authController->loginCliente($datos);
     exit;
 }
 
@@ -75,16 +96,6 @@ if ($metodo === "POST" && $accion === "registrar_bodeguero") {
     exit;
 }
 
-
-// -- LOGIN BODEGUERO
-
-if ($metodo === "POST" && $accion === "login_bodeguero") {
-    $bodegueroController->login($datos);
-    exit;
-}
-
-
-// -- CRUD BODEGUEROS
 
 // Listar
 if ($metodo === "GET" && $accion === "listar_bodegueros") {
