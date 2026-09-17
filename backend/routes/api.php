@@ -5,6 +5,7 @@ require_once "../controllers/UsuarioController.php";
 require_once "../controllers/BodegueroController.php";
 require_once "../middleware/AuthMiddleware.php";
 require_once "../controllers/ProveedorController.php";
+require_once "../controllers/CategoriaController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -161,6 +162,103 @@ if ($accion === "desactivar_proveedor" && $_SERVER["REQUEST_METHOD"] === "DELETE
 
     $controller = new ProveedorController($conexion);
     $controller->desactivar($id);
+
+    exit;
+}
+
+// REGISTRAR CATEGORÍA
+if ($accion === "registrar_categoria" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->registrar();
+
+    exit;
+}
+
+
+// LISTAR CATEGORÍAS
+if ($accion === "listar_categorias" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+// BUSCAR CATEGORÍA POR ID
+if ($accion === "buscar_categoria" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->buscar($_GET["id"]);
+
+    exit;
+}
+
+
+// BUSCAR CATEGORÍA POR NOMBRE
+if ($accion === "buscar_categoria_nombre" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->buscarPorNombre();
+
+    exit;
+}
+
+
+// ACTUALIZAR CATEGORÍA
+if ($accion === "actualizar_categoria" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+// ELIMINAR CATEGORÍA
+if ($accion === "eliminar_categoria" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->eliminar($_GET["id"]);
+
+    exit;
+}
+
+
+// ACTIVAR / DESACTIVAR CATEGORÍA
+if ($accion === "cambiar_estado_categoria" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->cambiarEstado($_GET["id"]);
 
     exit;
 }
