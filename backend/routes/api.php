@@ -6,6 +6,7 @@ require_once "../controllers/BodegueroController.php";
 require_once "../middleware/AuthMiddleware.php";
 require_once "../controllers/ProveedorController.php";
 require_once "../controllers/CategoriaController.php";
+require_once "../controllers/ProductoController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -259,6 +260,71 @@ if ($accion === "cambiar_estado_categoria" && $_SERVER["REQUEST_METHOD"] === "PU
 
     $controller = new CategoriaController($conexion);
     $controller->cambiarEstado($_GET["id"]);
+
+    exit;
+}
+
+if ($accion === "listar_productos" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new ProductoController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+if ($accion === "buscar_producto" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->buscar($_GET["id"]);
+
+    exit;
+}
+
+
+if ($accion === "registrar_producto" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new ProductoController($conexion);
+    $controller->registrar();
+
+    exit;
+}
+
+
+if ($accion === "actualizar_producto" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+if ($accion === "eliminar_producto" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->eliminar($_GET["id"]);
 
     exit;
 }
