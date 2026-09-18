@@ -16,14 +16,13 @@ class ProductoController
 
     public function listar()
     {
-        AuthMiddleware::verificarToken();
-        AuthMiddleware::permitirRoles([
+        $usuario = AuthMiddleware::permitirRoles([
             "ADMINISTRADOR",
             "LOGISTICA",
             "BODEGUERO"
         ]);
 
-        $productos = $this->producto->listar();
+        $productos = $this->producto->listar($usuario["rol"] === "BODEGUERO");
 
         Response::json([
             "mensaje" => "Productos obtenidos correctamente",
@@ -33,11 +32,9 @@ class ProductoController
 
     public function buscar($id)
     {
-        AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
             "ADMINISTRADOR",
-            "LOGISTICA",
-            "BODEGUERO"
+            "LOGISTICA"
         ]);
 
         $producto = $this->producto->buscarPorId($id);
@@ -55,11 +52,42 @@ class ProductoController
         ]);
     }
 
+    public function buscarPorNombre()
+    {
+        $usuario = AuthMiddleware::permitirRoles([
+            "ADMINISTRADOR",
+            "LOGISTICA",
+            "BODEGUERO"
+        ]);
+
+        $nombre = isset($_GET["nombre"])
+            ? trim($_GET["nombre"])
+            : "";
+
+        if ($nombre === "") {
+            Response::json([
+                "mensaje" => "Debe indicar el nombre del producto"
+            ], 400);
+            return;
+        }
+
+        $productos = $this->producto->buscarPorNombre(
+            $nombre,
+            $usuario["rol"] === "BODEGUERO"
+        );
+
+        Response::json([
+            "mensaje" => "Productos encontrados",
+            "datos" => $productos
+        ]);
+    }
+
     public function registrar()
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "ADMINISTRADOR",
+            "LOGISTICA"
         ]);
 
         $datos = json_decode(file_get_contents("php://input"), true);
@@ -127,7 +155,8 @@ class ProductoController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "ADMINISTRADOR",
+            "LOGISTICA"
         ]);
 
         $producto = $this->producto->buscarPorId($id);

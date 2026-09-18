@@ -3,7 +3,7 @@
 $host = "localhost";
 $dbname = "abastece_plus_db";
 $username = "root";
-$password = "1223";
+$password = "luz123";
 
 try {
     $conexion = new PDO(

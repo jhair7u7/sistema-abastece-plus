@@ -7,6 +7,7 @@ require_once "../middleware/AuthMiddleware.php";
 require_once "../controllers/ProveedorController.php";
 require_once "../controllers/CategoriaController.php";
 require_once "../controllers/ProductoController.php";
+require_once "../controllers/DireccionController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -300,6 +301,15 @@ if ($accion === "buscar_producto" && $_SERVER["REQUEST_METHOD"] === "GET") {
 }
 
 
+if ($accion === "buscar_producto_nombre" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new ProductoController($conexion);
+    $controller->buscarPorNombre();
+
+    exit;
+}
+
+
 if ($accion === "registrar_producto" && $_SERVER["REQUEST_METHOD"] === "POST") {
 
     $controller = new ProductoController($conexion);
@@ -335,6 +345,78 @@ if ($accion === "eliminar_producto" && $_SERVER["REQUEST_METHOD"] === "DELETE") 
     }
 
     $controller = new ProductoController($conexion);
+    $controller->eliminar($_GET["id"]);
+
+    exit;
+}
+
+// -- DIRECCIONES
+
+// LISTAR DIRECCIONES
+if ($accion === "listar_direcciones" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new DireccionController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+// BUSCAR DIRECCIÓN POR ID
+if ($accion === "buscar_direccion" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->obtener($_GET["id"]);
+
+    exit;
+}
+
+
+// REGISTRAR DIRECCIÓN
+if ($accion === "registrar_direccion" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new DireccionController($conexion);
+    $controller->crear();
+
+    exit;
+}
+
+
+// ACTUALIZAR DIRECCIÓN
+if ($accion === "actualizar_direccion" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+// ELIMINAR DIRECCIÓN
+if ($accion === "eliminar_direccion" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
     $controller->eliminar($_GET["id"]);
 
     exit;

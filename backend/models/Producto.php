@@ -10,8 +10,10 @@ class Producto
         $this->conn = $db;
     }
 
-    public function listar()
+    public function listar($soloActivos = false)
     {
+        $filtroActivo = $soloActivos ? "WHERE p.activo = TRUE" : "";
+
         $sql = "SELECT 
                     p.producto_id,
                     p.categoria_id,
@@ -27,6 +29,7 @@ class Producto
                     p.activo
                 FROM {$this->table} p
                 LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+                {$filtroActivo}
                 ORDER BY p.producto_id ASC";
 
         $stmt = $this->conn->prepare($sql);
@@ -59,6 +62,36 @@ class Producto
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarPorNombre($nombre, $soloActivos = false)
+    {
+        $filtroActivo = $soloActivos ? "AND p.activo = TRUE" : "";
+
+        $sql = "SELECT 
+                    p.producto_id,
+                    p.categoria_id,
+                    c.nombre AS categoria_nombre,
+                    p.codigo_sku,
+                    p.nombre,
+                    p.descripcion,
+                    p.imagen_url,
+                    p.marca,
+                    p.unidad_medida,
+                    p.peso_kg,
+                    p.precio_base_sugerido,
+                    p.activo
+                FROM {$this->table} p
+                LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+                WHERE p.nombre LIKE :nombre {$filtroActivo}
+                ORDER BY p.nombre ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $nombreBusqueda = "%" . $nombre . "%";
+        $stmt->bindParam(":nombre", $nombreBusqueda);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function buscarPorSku($sku)
