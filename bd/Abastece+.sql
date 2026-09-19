@@ -89,27 +89,28 @@ CREATE TABLE direcciones (
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 5. CATÁLOGO Y GESTIÓN DE STOCK FIFO
+-- 5. CATÁLOGO Y GESTIÓN DE STOCK FEFO (FIRST EXPIRED, FIRST OUT)
 -- -----------------------------------------------------------------------------
 CREATE TABLE categorias (
     categoria_id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(80) NOT NULL UNIQUE,
-    descripcion TEXT
+    activo BOOLEAN DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 CREATE TABLE productos (
     producto_id INT AUTO_INCREMENT PRIMARY KEY,
     categoria_id INT NOT NULL,
     codigo_sku VARCHAR(50) UNIQUE NOT NULL,
-    codigo_barras VARCHAR(30) UNIQUE,
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
+    imagen_url VARCHAR(255) NULL,
     marca VARCHAR(80) NOT NULL,
     unidad_medida VARCHAR(30) NOT NULL,
     peso_kg DECIMAL(8,2) NOT NULL,
     precio_base_sugerido DECIMAL(10,2) NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)
+    FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id),
+    FULLTEXT INDEX ft_productos_busqueda (nombre, marca, descripcion)
 ) ENGINE=InnoDB;
 
 CREATE TABLE productos_proveedor_escalas (
@@ -139,32 +140,13 @@ CREATE TABLE inventario_lotes (
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 6. TRANSACCIONES: SOLICITUDES Y PEDIDOS FIRMES
+-- 6. TRANSACCIONES: PEDIDOS DIRECTOS (SIN COTIZACIÓN NI APROBACIÓN PREVIA)
+-- El bodeguero compra directamente lo que necesita; no existe un flujo de
+-- solicitud/cotización/aprobación previo a la orden.
 -- -----------------------------------------------------------------------------
-CREATE TABLE solicitudes_abastecimiento (
-    solicitud_id INT AUTO_INCREMENT PRIMARY KEY,
-    codigo_solicitud VARCHAR(30) UNIQUE NOT NULL,
-    bodeguero_id INT NOT NULL,
-    direccion_id INT NOT NULL,
-    estado ENUM('PENDIENTE', 'COTIZADA', 'APROBADA', 'RECHAZADA') DEFAULT 'PENDIENTE',
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (bodeguero_id) REFERENCES bodegueros(bodeguero_id),
-    FOREIGN KEY (direccion_id) REFERENCES direcciones(direccion_id)
-) ENGINE=InnoDB;
-
-CREATE TABLE detalle_solicitudes (
-    detalle_solicitud_id INT AUTO_INCREMENT PRIMARY KEY,
-    solicitud_id INT NOT NULL,
-    producto_id INT NOT NULL,
-    cantidad_requerida INT NOT NULL,
-    FOREIGN KEY (solicitud_id) REFERENCES solicitudes_abastecimiento(solicitud_id) ON DELETE CASCADE,
-    FOREIGN KEY (producto_id) REFERENCES productos(producto_id)
-) ENGINE=InnoDB;
-
 CREATE TABLE pedidos_ordenes (
     orden_id INT AUTO_INCREMENT PRIMARY KEY,
     codigo_orden VARCHAR(35) UNIQUE NOT NULL,
-    solicitud_id INT NOT NULL,
     bodeguero_id INT NOT NULL,
     proveedor_id INT NOT NULL,
     direccion_id INT NOT NULL,
@@ -175,7 +157,6 @@ CREATE TABLE pedidos_ordenes (
     logistica_usuario_id INT NULL, 
     estado_pedido ENUM('EN_PREPARACION', 'LISTO_PARA_RUTA', 'EN_RUTA', 'ENTREGADO', 'CANCELADO') DEFAULT 'EN_PREPARACION',
     fecha_orden TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (solicitud_id) REFERENCES solicitudes_abastecimiento(solicitud_id),
     FOREIGN KEY (bodeguero_id) REFERENCES bodegueros(bodeguero_id),
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(proveedor_id),
     FOREIGN KEY (direccion_id) REFERENCES direcciones(direccion_id),
@@ -250,33 +231,46 @@ CREATE TABLE comprobantes_pago (
 ) ENGINE=InnoDB;
 
 -- =============================================================================
--- PROCEDIMIENTO ALMACENADO: DESPACHO CON LÓGICA FIFO
+-- PROCEDIMIENTO ALMACENADO: DESPACHO CON LÓGICA FEFO (FIRST EXPIRED, FIRST OUT)
+-- Nota: la versión anterior se llamaba "FIFO" pero en realidad ordenaba por
+-- lote_id (orden de ingreso), no por fecha de vencimiento. Al vender productos
+-- perecibles (lácteos, abarrotes con fecha de vencimiento), lo correcto es
+-- despachar primero el lote que vence antes (FEFO), no el que ingresó primero
+-- (FIFO), para minimizar mermas por vencimiento.
 -- =============================================================================
 DELIMITER $$
 
-CREATE PROCEDURE sp_despachar_orden_fifo(
+CREATE PROCEDURE sp_despachar_orden_fefo(
     IN p_orden_id INT,
     IN p_producto_id INT,
     IN p_cantidad_solicitada INT,
     IN p_precio_unitario DECIMAL(10,2)
 )
 BEGIN
+    DECLARE v_proveedor_id INT;
     DECLARE v_lote_id INT;
     DECLARE v_stock_disponible INT;
     DECLARE v_cantidad_a_descontar INT;
     DECLARE v_cantidad_restante INT DEFAULT p_cantidad_solicitada;
     DECLARE done INT DEFAULT FALSE;
 
-    -- Cursor que prioriza lotes próximos a vencer (FIFO)
+    -- Cursor que prioriza el lote con fecha de vencimiento más próxima (FEFO).
+    -- lote_id ASC es solo el criterio de desempate cuando dos lotes vencen el mismo día.
+    -- Se filtra también por proveedor_id: antes el cursor podía tomar stock de
+    -- CUALQUIER proveedor que tuviera ese producto, aunque el pedido se hubiera
+    -- hecho con un proveedor distinto (inconsistencia entre la orden y el lote
+    -- realmente descontado).
     DECLARE cur_lotes CURSOR FOR 
         SELECT lote_id, stock_disponible 
         FROM inventario_lotes 
-        WHERE producto_id = p_producto_id AND stock_disponible > 0
-        ORDER BY lote_id ASC;
+        WHERE producto_id = p_producto_id AND proveedor_id = v_proveedor_id AND stock_disponible > 0
+        ORDER BY fecha_vencimiento ASC, lote_id ASC;
 
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
     START TRANSACTION;
+
+    SELECT proveedor_id INTO v_proveedor_id FROM pedidos_ordenes WHERE orden_id = p_orden_id;
 
     OPEN cur_lotes;
 
@@ -310,7 +304,7 @@ BEGIN
     IF v_cantidad_restante > 0 THEN
         ROLLBACK;
         SIGNAL SQLSTATE '45000' 
-        SET MESSAGE_TEXT = 'Error FIFO: Stock insuficiente en almacén para completar el despacho del ítem.';
+        SET MESSAGE_TEXT = 'Error FEFO: Stock insuficiente en almacén para completar el despacho del ítem.';
     ELSE
         COMMIT;
     END IF;
@@ -379,14 +373,14 @@ INSERT INTO direcciones (direccion_id, bodeguero_id, proveedor_id, departamento,
 (3, NULL, 1, 'Lima', 'Lima', 'Santa Anita', 'Av. De la Cultura 1200, Complejo B4', 'Mercado Mayorista', 'LIMA_ESTE', '15011');
 
 -- 5. Catálogo
-INSERT INTO categorias (categoria_id, nombre, descripcion) VALUES
-(1, 'Abarrotes Basicos', 'Arroz, azucar, fideos, aceites y granos'),
-(2, 'Lacteos y Derivados', 'Leche evaporada, quesos y mantequillas');
+INSERT INTO categorias (categoria_id, nombre) VALUES
+(1, 'Abarrotes Basicos'),
+(2, 'Lacteos y Derivados');
 
-INSERT INTO productos (producto_id, categoria_id, codigo_sku, codigo_barras, nombre, descripcion, marca, unidad_medida, peso_kg, precio_base_sugerido) VALUES
-(1, 1, 'ARR-COS-50KG', '775123456701', 'Arroz Costeño Extra 50 kg', 'Saco de arroz grano largo', 'Costeño', 'Saco x 50kg', 50.00, 185.00),
-(2, 1, 'ACE-PRI-12L', '775123456702', 'Aceite Primor Clasico 1L (Caja x 12)', 'Caja de 12 botellas de 1L', 'Primor', 'Caja x 12', 12.00, 118.00),
-(3, 2, 'LEC-GLO-AZUL', '775123456703', 'Leche Gloria Azul 400g (Plancha x 24)', 'Plancha de 24 latas de leche', 'Gloria', 'Plancha x 24', 9.60, 92.00);
+INSERT INTO productos (producto_id, categoria_id, codigo_sku, nombre, descripcion, marca, unidad_medida, peso_kg, precio_base_sugerido) VALUES
+(1, 1, 'ARR-COS-50KG', 'Arroz Costeño Extra 50 kg', 'Saco de arroz grano largo', 'Costeño', 'Saco x 50kg', 50.00, 185.00),
+(2, 1, 'ACE-PRI-12L', 'Aceite Primor Clasico 1L (Caja x 12)', 'Caja de 12 botellas de 1L', 'Primor', 'Caja x 12', 12.00, 118.00),
+(3, 2, 'LEC-GLO-AZUL', 'Leche Gloria Azul 400g (Plancha x 24)', 'Plancha de 24 latas de leche', 'Gloria', 'Plancha x 24', 9.60, 92.00);
 
 -- Precios por Escalas
 INSERT INTO productos_proveedor_escalas (producto_id, proveedor_id, cantidad_minima, cantidad_maxima, precio_unitario) VALUES
@@ -404,34 +398,18 @@ INSERT INTO inventario_lotes (lote_id, producto_id, proveedor_id, numero_lote, f
 (2, 2, 1, 'LOTE-ACE-2026-01', '2026-05-15', '2027-09-20', 120, 120, 'Rack B-03'),
 (3, 3, 2, 'LOTE-GLO-2026-05', '2026-07-01', '2027-06-30', 80, 80, 'Rack C-02');
 
--- 6. Transacciones: Solicitudes de Abastecimiento
--- Solicitud 1: Aprobada y despachada a Orden
-INSERT INTO solicitudes_abastecimiento (solicitud_id, codigo_solicitud, bodeguero_id, direccion_id, estado, fecha_creacion) VALUES
-(1, 'SOL-2026-001', 1, 1, 'APROBADA', '2026-09-01 09:15:00');
-
-INSERT INTO detalle_solicitudes (solicitud_id, producto_id, cantidad_requerida) VALUES
-(1, 1, 10),
-(1, 2, 6);
-
--- Solicitud 2: Pendiente de cotización y revisión por Logística
-INSERT INTO solicitudes_abastecimiento (solicitud_id, codigo_solicitud, bodeguero_id, direccion_id, estado, fecha_creacion) VALUES
-(2, 'SOL-2026-002', 2, 2, 'PENDIENTE', '2026-09-03 16:40:00');
-
-INSERT INTO detalle_solicitudes (solicitud_id, producto_id, cantidad_requerida) VALUES
-(2, 3, 15);
-
--- Orden Generada a partir de Solicitud 1
+-- 6. Transacciones: Pedido directo del bodeguero (sin solicitud/cotización previa)
 INSERT INTO pedidos_ordenes (
-    orden_id, codigo_orden, solicitud_id, bodeguero_id, proveedor_id, direccion_id,
+    orden_id, codigo_orden, bodeguero_id, proveedor_id, direccion_id,
     subtotal, igv, costo_envio, total, logistica_usuario_id, estado_pedido, fecha_orden
 ) VALUES (
-    1, 'ORD-2026-00045', 1, 1, 1, 1,
+    1, 'ORD-2026-00045', 1, 1, 1,
     2077.97, 374.03, 30.00, 2482.00, 4, 'EN_RUTA', '2026-09-02 08:00:00'
 );
 
--- Se ejecuta la lógica FIFO para descontar lotes y poblar detalle_ordenes:
-CALL sp_despachar_orden_fifo(1, 1, 10, 178.00); -- Consume 10 sacos de Arroz
-CALL sp_despachar_orden_fifo(1, 2, 6, 112.00);  -- Consume 6 cajas de Aceite
+-- Se ejecuta la lógica FEFO para descontar el lote que vence antes y poblar detalle_ordenes:
+CALL sp_despachar_orden_fefo(1, 1, 10, 178.00); -- Consume 10 sacos de Arroz
+CALL sp_despachar_orden_fefo(1, 2, 6, 112.00);  -- Consume 6 cajas de Aceite
 
 -- 7. Despacho en Ruta
 INSERT INTO rutas_despacho (ruta_id, orden_id, transportista_id, vehiculo_placa, estado_entrega, hora_salida, notas_entrega) VALUES
@@ -451,15 +429,15 @@ INSERT INTO comprobantes_pago (comprobante_id, orden_id, tipo_comprobante, serie
 -- =============================================================================
 
 -- =============================================================================
--- SECCIÓN 1: SOLICITUDES DE ABASTECIMIENTO Y PROCESO DE COTIZACIÓN
+-- SECCIÓN 1: PEDIDOS DIRECTOS DEL BODEGUERO (SIN COTIZACIÓN NI APROBACIÓN)
 -- =============================================================================
 
--- 1.1. Bandeja de solicitudes de bodegas con datos del titular y dirección
+-- 1.1. Bandeja de pedidos de bodegas con datos del titular y dirección
 SELECT 
-    s.solicitud_id,
-    s.codigo_solicitud,
-    s.fecha_creacion,
-    s.estado,
+    o.orden_id,
+    o.codigo_orden,
+    o.fecha_orden,
+    o.estado_pedido,
     b.nombre_comercial AS bodega,
     b.ruc AS ruc_bodega,
     CONCAT(b.nombre, ' ', b.apellidos) AS titular,
@@ -467,70 +445,49 @@ SELECT
     d.distrito,
     d.direccion_exacta,
     d.zona_reparto
-FROM solicitudes_abastecimiento s
-INNER JOIN bodegueros b ON s.bodeguero_id = b.bodeguero_id
-INNER JOIN direcciones d ON s.direccion_id = d.direccion_id
-ORDER BY s.fecha_creacion DESC;
+FROM pedidos_ordenes o
+INNER JOIN bodegueros b ON o.bodeguero_id = b.bodeguero_id
+INNER JOIN direcciones d ON o.direccion_id = d.direccion_id
+ORDER BY o.fecha_orden DESC;
 
--- 1.2. Detalle completo de productos requeridos en cada solicitud
+-- 1.2. Detalle completo de productos pedidos en cada orden
 SELECT 
-    s.codigo_solicitud,
-    s.estado AS estado_solicitud,
+    o.codigo_orden,
+    o.estado_pedido,
     b.nombre_comercial AS bodega,
     c.nombre AS categoria,
     p.codigo_sku,
     p.nombre AS producto,
     p.marca,
     p.unidad_medida,
-    ds.cantidad_requerida,
-    (ds.cantidad_requerida * p.peso_kg) AS peso_estimado_kg
-FROM detalle_solicitudes ds
-INNER JOIN solicitudes_abastecimiento s ON ds.solicitud_id = s.solicitud_id
-INNER JOIN bodegueros b ON s.bodeguero_id = b.bodeguero_id
-INNER JOIN productos p ON ds.producto_id = p.producto_id
-INNER JOIN categorias c ON p.categoria_id = c.categoria_id
-ORDER BY s.codigo_solicitud, p.nombre;
-
--- 1.3. Matriz de Cotización automática de solicitudes según escalas de proveedores
-SELECT 
-    s.codigo_solicitud,
-    b.nombre_comercial AS bodega,
-    p.nombre AS producto,
-    ds.cantidad_requerida,
-    pr.nombre_comercial AS proveedor_asignado,
-    e.precio_unitario AS precio_escala,
-    (ds.cantidad_requerida * e.precio_unitario) AS subtotal_linea_estimado
-FROM detalle_solicitudes ds
-INNER JOIN solicitudes_abastecimiento s ON ds.solicitud_id = s.solicitud_id
-INNER JOIN bodegueros b ON s.bodeguero_id = b.bodeguero_id
-INNER JOIN productos p ON ds.producto_id = p.producto_id
-INNER JOIN productos_proveedor_escalas e ON p.producto_id = e.producto_id
-INNER JOIN proveedores pr ON e.proveedor_id = pr.proveedor_id
-WHERE (ds.cantidad_requerida >= e.cantidad_minima)
-  AND (e.cantidad_maxima IS NULL OR ds.cantidad_requerida <= e.cantidad_maxima);
-
--- 1.4. Trazabilidad completa: Solicitud -> Orden generada -> Estado de entrega
-SELECT 
-    s.codigo_solicitud,
-    s.fecha_creacion AS fecha_solicitud,
-    s.estado AS estado_solicitud,
-    o.codigo_orden,
-    o.fecha_orden,
-    o.estado_pedido,
-    b.nombre_comercial AS bodega,
-    pr.nombre_comercial AS proveedor,
-    o.total AS total_orden
-FROM solicitudes_abastecimiento s
-INNER JOIN pedidos_ordenes o ON s.solicitud_id = o.solicitud_id
+    dod.cantidad,
+    (dod.cantidad * p.peso_kg) AS peso_estimado_kg
+FROM detalle_ordenes dod
+INNER JOIN pedidos_ordenes o ON dod.orden_id = o.orden_id
 INNER JOIN bodegueros b ON o.bodeguero_id = b.bodeguero_id
-INNER JOIN proveedores pr ON o.proveedor_id = pr.proveedor_id;
+INNER JOIN productos p ON dod.producto_id = p.producto_id
+INNER JOIN categorias c ON p.categoria_id = c.categoria_id
+ORDER BY o.codigo_orden, p.nombre;
+
+-- 1.3. Tabla de precios por escala de proveedor (para calcular el total en el
+-- front mientras el bodeguero arma su pedido, según la cantidad que elija)
+SELECT 
+    p.nombre AS producto,
+    pr.nombre_comercial AS proveedor,
+    e.cantidad_minima,
+    e.cantidad_maxima,
+    e.precio_unitario
+FROM productos_proveedor_escalas e
+INNER JOIN productos p ON e.producto_id = p.producto_id
+INNER JOIN proveedores pr ON e.proveedor_id = pr.proveedor_id
+ORDER BY p.nombre, e.cantidad_minima;
 
 
 -- =============================================================================
--- SECCIÓN 2: AUDITORÍA DE INVENTARIO FIFO Y CATÁLOGO (ROL LOGÍSTICA)
+-- SECCIÓN 2: AUDITORÍA DE INVENTARIO FEFO Y CATÁLOGO (ROL LOGÍSTICA)
 -- =============================================================================
 
--- 2.1. Auditoría de lotes FIFO ordenada por vencimiento con cálculo de despacho
+-- 2.1. Auditoría de lotes FEFO ordenada por vencimiento con cálculo de despacho
 SELECT 
     p.codigo_sku,
     p.nombre AS producto,
@@ -560,6 +517,25 @@ FROM pedidos_ordenes o
 INNER JOIN bodegueros b ON o.bodeguero_id = b.bodeguero_id
 INNER JOIN proveedores pr ON o.proveedor_id = pr.proveedor_id
 INNER JOIN usuarios_internos u ON o.logistica_usuario_id = u.usuario_interno_id;
+
+-- 2.3. Búsqueda de productos por texto libre para el catálogo del front-end (FTS)
+-- Reemplaza 'arroz' por el término que escriba el usuario en el buscador.
+-- MySQL ordena los resultados por relevancia (columna "relevancia") sin
+-- necesidad de motores externos como Elasticsearch.
+SELECT 
+    p.producto_id,
+    p.codigo_sku,
+    p.nombre,
+    p.marca,
+    p.descripcion,
+    c.nombre AS categoria,
+    p.precio_base_sugerido,
+    MATCH(p.nombre, p.marca, p.descripcion) AGAINST('arroz' IN NATURAL LANGUAGE MODE) AS relevancia
+FROM productos p
+INNER JOIN categorias c ON p.categoria_id = c.categoria_id
+WHERE MATCH(p.nombre, p.marca, p.descripcion) AGAINST('arroz' IN NATURAL LANGUAGE MODE)
+  AND p.activo = TRUE
+ORDER BY relevancia DESC;
 
 
 -- =============================================================================

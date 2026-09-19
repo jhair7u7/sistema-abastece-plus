@@ -1,11 +1,13 @@
 <?php
 
-require_once __DIR__ . "/../controllers/AuthController.php";
-require_once __DIR__ . "/../controllers/UsuarioController.php";
-require_once __DIR__ . "/../controllers/BodegueroController.php";
-require_once __DIR__ . "/../middleware/AuthMiddleware.php";
-require_once __DIR__ . "/../controllers/ProveedorController.php";
-require_once __DIR__ . "/../controllers/ProductoController.php";
+require_once "../controllers/AuthController.php";
+require_once "../controllers/UsuarioController.php";
+require_once "../controllers/BodegueroController.php";
+require_once "../middleware/AuthMiddleware.php";
+require_once "../controllers/ProveedorController.php";
+require_once "../controllers/CategoriaController.php";
+require_once "../controllers/ProductoController.php";
+require_once "../controllers/DireccionController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -14,20 +16,35 @@ $datos = json_decode(file_get_contents("php://input"), true);
 $authController = new AuthController($conexion);
 $usuarioController = new UsuarioController($conexion);
 $bodegueroController = new BodegueroController($conexion);
-$productoController = new ProductoController($conexion);
 
 $accion = isset($_GET["accion"]) ? $_GET["accion"] : "";
 
-if ($metodo === "GET" && $accion === "listar_productos") {
-    $productoController->listar();
+
+// -- LOGIN USUARIO INTERNO (DEDICADO)
+
+if ($metodo === "POST" && $accion === "login_admin") {
+    $authController->loginAdmin($datos);
     exit;
 }
 
 
-// -- LOGIN USUARIO INTERNO
+// -- LOGIN CLIENTE / BODEGUERO (DEDICADO)
+
+if ($metodo === "POST" && $accion === "login_cliente") {
+    $authController->loginCliente($datos);
+    exit;
+}
+
+
+// -- ALIAS RETROCOMPATIBLES
 
 if ($metodo === "POST" && $accion === "login") {
-    $authController->login($datos);
+    $authController->loginAdmin($datos);
+    exit;
+}
+
+if ($metodo === "POST" && $accion === "login_bodeguero") {
+    $authController->loginCliente($datos);
     exit;
 }
 
@@ -80,16 +97,6 @@ if ($metodo === "POST" && $accion === "registrar_bodeguero") {
     exit;
 }
 
-
-// -- LOGIN BODEGUERO
-
-if ($metodo === "POST" && $accion === "login_bodeguero") {
-    $bodegueroController->login($datos);
-    exit;
-}
-
-
-// -- CRUD BODEGUEROS
 
 // Listar
 if ($metodo === "GET" && $accion === "listar_bodegueros") {
@@ -168,6 +175,249 @@ if ($accion === "desactivar_proveedor" && $_SERVER["REQUEST_METHOD"] === "DELETE
 
     $controller = new ProveedorController($conexion);
     $controller->desactivar($id);
+
+    exit;
+}
+
+// REGISTRAR CATEGORÍA
+if ($accion === "registrar_categoria" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->registrar();
+
+    exit;
+}
+
+
+// LISTAR CATEGORÍAS
+if ($accion === "listar_categorias" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+// BUSCAR CATEGORÍA POR ID
+if ($accion === "buscar_categoria" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->buscar($_GET["id"]);
+
+    exit;
+}
+
+
+// BUSCAR CATEGORÍA POR NOMBRE
+if ($accion === "buscar_categoria_nombre" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new CategoriaController($conexion);
+    $controller->buscarPorNombre();
+
+    exit;
+}
+
+
+// ACTUALIZAR CATEGORÍA
+if ($accion === "actualizar_categoria" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+// ELIMINAR CATEGORÍA
+if ($accion === "eliminar_categoria" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->eliminar($_GET["id"]);
+
+    exit;
+}
+
+
+// ACTIVAR / DESACTIVAR CATEGORÍA
+if ($accion === "cambiar_estado_categoria" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la categoría"
+        ], 400);
+        exit;
+    }
+
+    $controller = new CategoriaController($conexion);
+    $controller->cambiarEstado($_GET["id"]);
+
+    exit;
+}
+
+if ($accion === "listar_productos" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new ProductoController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+if ($accion === "buscar_producto" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->buscar($_GET["id"]);
+
+    exit;
+}
+
+
+if ($accion === "buscar_producto_nombre" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new ProductoController($conexion);
+    $controller->buscarPorNombre();
+
+    exit;
+}
+
+
+if ($accion === "registrar_producto" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new ProductoController($conexion);
+    $controller->registrar();
+
+    exit;
+}
+
+
+if ($accion === "actualizar_producto" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+if ($accion === "eliminar_producto" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID del producto"
+        ], 400);
+        exit;
+    }
+
+    $controller = new ProductoController($conexion);
+    $controller->eliminar($_GET["id"]);
+
+    exit;
+}
+
+// -- DIRECCIONES
+
+// LISTAR DIRECCIONES
+if ($accion === "listar_direcciones" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new DireccionController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+// BUSCAR DIRECCIÓN POR ID
+if ($accion === "buscar_direccion" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->obtener($_GET["id"]);
+
+    exit;
+}
+
+
+// REGISTRAR DIRECCIÓN
+if ($accion === "registrar_direccion" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new DireccionController($conexion);
+    $controller->crear();
+
+    exit;
+}
+
+
+// ACTUALIZAR DIRECCIÓN
+if ($accion === "actualizar_direccion" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+// ELIMINAR DIRECCIÓN
+if ($accion === "eliminar_direccion" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->eliminar($_GET["id"]);
 
     exit;
 }
