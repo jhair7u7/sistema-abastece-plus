@@ -1,10 +1,11 @@
 <?php
 
-require_once "../controllers/AuthController.php";
-require_once "../controllers/UsuarioController.php";
-require_once "../controllers/BodegueroController.php";
-require_once "../middleware/AuthMiddleware.php";
-require_once "../controllers/ProveedorController.php";
+require_once __DIR__ . "/../controllers/AuthController.php";
+require_once __DIR__ . "/../controllers/UsuarioController.php";
+require_once __DIR__ . "/../controllers/BodegueroController.php";
+require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../controllers/ProveedorController.php";
+require_once __DIR__ . "/../controllers/ProductoController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -13,8 +14,14 @@ $datos = json_decode(file_get_contents("php://input"), true);
 $authController = new AuthController($conexion);
 $usuarioController = new UsuarioController($conexion);
 $bodegueroController = new BodegueroController($conexion);
+$productoController = new ProductoController($conexion);
 
 $accion = isset($_GET["accion"]) ? $_GET["accion"] : "";
+
+if ($metodo === "GET" && $accion === "listar_productos") {
+    $productoController->listar();
+    exit;
+}
 
 
 // -- LOGIN USUARIO INTERNO

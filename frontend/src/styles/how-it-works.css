@@ -1,0 +1,371 @@
+.how-page {
+    overflow: hidden;
+    color: var(--brand-ink);
+    background: #fff;
+}
+
+.how-container {
+    width: min(1220px, calc(100% - 48px));
+    margin-inline: auto;
+}
+
+.how-kicker {
+    color: var(--support-teal);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+}
+
+.how-kicker.light {
+    color: #F9A8D4
+}
+
+.how-hero {
+    min-height: 620px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    background: radial-gradient(circle at 15% 15%, rgba(249, 115, 22, .16), transparent 27%), radial-gradient(circle at 85% 78%, rgba(20, 184, 166, .17), transparent 29%), linear-gradient(135deg, #FFF8F3, #F7F3FF 55%, #EEFBF9);
+}
+
+.how-hero h1 {
+    max-width: 970px;
+    margin: 23px auto 0;
+    font-size: clamp(3.1rem, 7vw, 6.7rem);
+    line-height: .94;
+    letter-spacing: -.068em;
+}
+
+.how-hero p {
+    max-width: 650px;
+    margin: 27px auto 0;
+    color: #667085;
+    font-size: 1.1rem;
+    line-height: 1.75;
+}
+
+.how-hero a {
+    width: max-content;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 34px auto 0;
+    color: #fff;
+    background: var(--brand-dark);
+    padding: 15px 22px;
+    border-radius: 999px;
+    font-weight: 800;
+    transition: transform .25s;
+}
+
+.how-hero a:hover {
+    transform: translateY(-3px)
+}
+
+.how-hero a svg {
+    width: 18px;
+    animation: how-arrow 1.7s infinite
+}
+
+.how-journey {
+    padding: 125px 0;
+}
+
+.journey-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    align-items: center;
+    gap: clamp(70px, 10vw, 130px);
+    margin-bottom: 145px;
+}
+
+.journey-step:last-child {
+    margin-bottom: 0
+}
+
+.journey-step-reverse .journey-image {
+    order: 2
+}
+
+.journey-step-reverse .journey-copy {
+    order: 1
+}
+
+.journey-image {
+    position: relative;
+    overflow: hidden;
+    border-radius: 30px;
+    box-shadow: 0 30px 75px rgba(16, 24, 40, .17);
+}
+
+.journey-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: var(--primary);
+    transform-origin: right;
+    transform: scaleX(0);
+    pointer-events: none;
+}
+
+.journey-image img {
+    width: 100%;
+    height: 500px;
+    display: block;
+    object-fit: cover;
+    transition: transform .8s cubic-bezier(.2, .7, .2, 1);
+}
+
+.journey-image:hover img {
+    transform: scale(1.035)
+}
+
+.journey-image>span {
+    position: absolute;
+    left: 22px;
+    top: 22px;
+    z-index: 3;
+    color: #fff;
+    background: rgba(19, 10, 37, .8);
+    backdrop-filter: blur(10px);
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: .76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.journey-step:first-child .journey-image img {
+    transform: scale(1.12);
+}
+
+/* Ajuste de encuadre paso 01 */
+.journey-step:first-child .journey-image img {
+    object-position: 60% center;
+}
+
+.journey-step:first-child .journey-image:hover img {
+    transform: scale(1.16);
+}
+
+
+.journey-step:nth-child(4) .journey-image img {
+    width:100%;
+    height:500px;
+    object-fit:cover;
+    object-position:center;
+}
+
+
+@media(max-width:520px) {
+
+    .journey-step:nth-child(4) .journey-image img {
+        height:260px;
+        object-fit:cover;
+        object-position:center;
+    }
+
+}
+
+.journey-image[data-reveal="wipe-left"],
+.journey-image[data-reveal="wipe-right"] {
+    clip-path: none;
+}
+
+.journey-icon {
+    width: 64px;
+    height: 64px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 34px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--accent-pink));
+    border-radius: 20px;
+    box-shadow: 0 15px 30px rgba(91, 33, 182, .2);
+}
+
+.journey-icon svg {
+    width: 28px;
+    height: 28px
+}
+
+.journey-copy h2 {
+    margin: 18px 0 22px;
+    font-size: clamp(2.3rem, 4vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -.05em;
+}
+
+.journey-copy>p {
+    color: #667085;
+    line-height: 1.8;
+}
+
+.journey-copy>strong {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 27px;
+    color: #344054;
+    font-size: .9rem;
+}
+
+.journey-copy>strong svg {
+    width: 20px;
+    color: var(--support-teal)
+}
+
+.how-finish {
+    padding: 110px 0;
+    text-align: center;
+    color: #fff;
+    background: radial-gradient(circle at 20% 100%, rgba(236, 72, 153, .28), transparent 30%), #130A25;
+}
+
+.how-finish h2 {
+    max-width: 800px;
+    margin: 17px auto 0;
+    font-size: clamp(2.6rem, 5vw, 4.8rem);
+    line-height: 1;
+    letter-spacing: -.055em;
+}
+
+.how-finish p {
+    margin: 22px auto 0;
+    color: #D0D5DD
+}
+
+.how-finish a {
+    width: max-content;
+    display: block;
+    margin: 31px auto 0;
+    padding: 16px 25px;
+    color: #3B0B82;
+    background: #fff;
+    border-radius: 999px;
+    font-weight: 800;
+    transition: transform .25s
+}
+
+.how-finish a:hover {
+    transform: translateY(-3px)
+}
+
+@keyframes how-arrow {
+    50% {
+        transform: translateY(5px)
+    }
+}
+
+@media(max-width:900px) {
+    .journey-step {
+        grid-template-columns: 1fr;
+        gap: 45px;
+        margin-bottom: 105px
+    }
+
+    .journey-step-reverse .journey-image,
+    .journey-step-reverse .journey-copy {
+        order: initial
+    }
+
+    .journey-image img {
+        height: min(500px, 55vw)
+    }
+
+    .journey-copy {
+        max-width: 680px
+    }
+}
+
+@media(max-width:520px) {
+    .how-container {
+        width: calc(100% - 28px)
+    }
+
+    .how-hero {
+        min-height: 560px
+    }
+
+    .how-hero h1 {
+        font-size: 3rem
+    }
+
+    .how-journey {
+        padding: 85px 0
+    }
+
+    .journey-step {
+        gap: 34px;
+        margin-bottom: 85px
+    }
+
+    .journey-image {
+        border-radius: 22px
+    }
+
+    .journey-image img {
+        height: 260px
+    }
+
+    .journey-icon {
+        margin-bottom: 25px
+    }
+
+    .how-finish {
+        padding: 82px 0
+    }
+}
+
+/* Ajuste especial paso 04 */
+.journey-step:nth-child(4) .journey-image img {
+    width:100%;
+    height:500px;
+    object-fit:cover;
+    object-position:center;
+}
+
+
+@media(max-width:900px){
+
+    .journey-step:nth-child(4){
+        grid-template-columns:1fr;
+    }
+
+}
+
+
+@media(max-width:520px){
+
+    .journey-step:nth-child(4) .journey-image img {
+        height:260px;
+        object-fit:cover;
+        object-position:center;
+    }
+
+}
+
+@media(min-width:901px){
+
+    .journey-step:nth-child(4){
+        grid-template-columns: 0.75fr 1.25fr;
+        gap: 80px;
+    }
+
+
+    .journey-step:nth-child(4) .journey-image{
+        width:100%;
+    }
+
+
+    .journey-step:nth-child(4) .journey-image img{
+        height:500px;
+        object-fit:cover;
+        object-position:center;
+    }
+
+}

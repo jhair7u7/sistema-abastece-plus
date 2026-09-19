@@ -36,6 +36,11 @@ class AuthController
             return;
         }
 
+        if (!$usuario["activo"]) {
+            Response::json(["mensaje" => "La cuenta se encuentra desactivada"], 403);
+            return;
+        }
+
         // Convertir la contraseña ingresada a SHA-256
         $passwordHash = hash("sha256", $password);
 

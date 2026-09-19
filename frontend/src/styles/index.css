@@ -1,0 +1,14 @@
+/*
+ * Punto de entrada único para los estilos de la aplicación.
+ *
+ * Los componentes y las páginas no importan CSS directamente. Los archivos se
+ * agrupan aquí por responsabilidad para conservar un orden de carga predecible
+ * sin convertir este punto de entrada en un archivo monolítico.
+ */
+@import './global.css';
+@import './navigation.css';
+@import './catalog.css';
+@import './about.css';
+@import './how-it-works.css';
+@import './auth.css';
+@import './dashboard.css';

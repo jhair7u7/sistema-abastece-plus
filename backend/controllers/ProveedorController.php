@@ -6,7 +6,7 @@ class ProveedorController
 
     public function __construct($conexion)
     {
-        require_once "../models/Proveedor.php";
+        require_once __DIR__ . "/../models/Proveedor.php";
         $this->proveedor = new Proveedor($conexion);
     }
 

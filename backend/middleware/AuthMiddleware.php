@@ -2,7 +2,10 @@
 
 class AuthMiddleware
 {
-    private static $secret = "ABASTECEPLUS_SECRET_2026";
+    private static function secret()
+    {
+        return getenv("AUTH_SECRET") ?: "ABASTECEPLUS_SECRET_2026";
+    }
 
     // Crear token
     public static function crearToken($usuario)
@@ -21,7 +24,7 @@ class AuthMiddleware
         $firma = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         return $payloadBase64 . "." . $firma;
@@ -65,7 +68,7 @@ class AuthMiddleware
         $firmaEsperada = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         if (!hash_equals($firmaEsperada, $firmaRecibida)) {
@@ -113,7 +116,7 @@ class AuthMiddleware
         $firma = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         return $payloadBase64 . "." . $firma;
@@ -124,7 +127,7 @@ class AuthMiddleware
     {
         $usuario = self::verificarToken();
 
-        if (!in_array($usuario["rol"], $rolesPermitidos)) {
+        if (!isset($usuario["rol"]) || !in_array($usuario["rol"], $rolesPermitidos, true)) {
             Response::json([
                 "mensaje" => "No tienes permisos para realizar esta acción"
             ], 403);
