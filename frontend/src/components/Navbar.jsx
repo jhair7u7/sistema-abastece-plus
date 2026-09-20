@@ -38,7 +38,7 @@ export default function Navbar() {
           </Link>
           {session && (
             <Link
-              to={session.type === "interno" ? "/admin" : "/mi-negocio"}
+              to={session.type === "interno" ? "/admin" : "/tienda"}
               onClick={close}
             >
               Mi panel

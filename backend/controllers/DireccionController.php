@@ -15,7 +15,7 @@ class DireccionController
     // -- LISTAR
     public function listar()
     {
-        $usuario = AuthMiddleware::verificarToken();
+        $usuario = AuthMiddleware::permitirRoles(["BODEGUERO", "GESTOR_ATENCION"]);
 
         // BODEGUERO: solo ve sus propias direcciones
         if ($usuario["rol"] === "BODEGUERO") {
@@ -37,7 +37,7 @@ class DireccionController
     // -- OBTENER POR ID
     public function obtener($id)
     {
-        $usuario = AuthMiddleware::verificarToken();
+        $usuario = AuthMiddleware::permitirRoles(["BODEGUERO", "GESTOR_ATENCION"]);
 
         $direccion = $this->direccion->obtenerPorId($id);
 
@@ -70,7 +70,7 @@ class DireccionController
     // -- CREAR
     public function crear()
     {
-        $usuario = AuthMiddleware::verificarToken();
+        $usuario = AuthMiddleware::permitirRoles(["BODEGUERO", "GESTOR_ATENCION"]);
 
         $datos = json_decode(file_get_contents("php://input"), true);
 
@@ -120,11 +120,11 @@ class DireccionController
             $bodeguero = !empty($datos["bodeguero_id"]);
             $proveedor = !empty($datos["proveedor_id"]);
 
-            if ($bodeguero === $proveedor) {
+            if (!$bodeguero || $proveedor) {
 
                 Response::json([
                     "success" => false,
-                    "mensaje" => "La dirección debe pertenecer a un bodeguero o a un proveedor, pero no a ambos"
+                    "mensaje" => "La dirección debe pertenecer a un comerciante"
                 ], 400);
 
                 return;
@@ -163,7 +163,7 @@ class DireccionController
     // -- ACTUALIZAR
     public function actualizar($id)
     {
-        $usuario = AuthMiddleware::verificarToken();
+        $usuario = AuthMiddleware::permitirRoles(["BODEGUERO", "GESTOR_ATENCION"]);
 
         $direccion = $this->direccion->obtenerPorId($id);
 
@@ -237,7 +237,7 @@ class DireccionController
     // -- ELIMINAR
     public function eliminar($id)
     {
-        $usuario = AuthMiddleware::verificarToken();
+        $usuario = AuthMiddleware::permitirRoles(["BODEGUERO", "GESTOR_ATENCION"]);
 
         $direccion = $this->direccion->obtenerPorId($id);
 

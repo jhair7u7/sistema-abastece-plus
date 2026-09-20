@@ -12,6 +12,7 @@ export function CartProvider({ children }) {
       );
 
       if (exist) {
+        if (exist.cantidad >= Number(product.stock_disponible)) return current;
         return current.map((item) =>
           item.producto_id === product.producto_id
             ? {
@@ -80,6 +81,8 @@ export function CartProvider({ children }) {
   );
 }
 
+// El hook comparte el contexto del proveedor, igual que useAuth.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCart() {
   return useContext(CartContext);
 }

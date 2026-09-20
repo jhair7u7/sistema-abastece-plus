@@ -149,7 +149,7 @@ class Bodeguero
                     ruc,
                     tipo_establecimiento,
                     nombre_comercial,
-                    razon_social
+                    razon_social, tipo_establecimiento_otro
                 )
                 VALUES
                 (
@@ -161,7 +161,7 @@ class Bodeguero
                     :ruc,
                     :tipo_establecimiento,
                     :nombre_comercial,
-                    :razon_social
+                    :razon_social, IF(:tipo_otro = 'OTRO', 'Establecimiento demo', NULL)
                 )";
 
         $stmt = $this->conexion->prepare($sql);
@@ -173,6 +173,7 @@ class Bodeguero
         $stmt->bindParam(":telefono", $telefono);
         $stmt->bindParam(":ruc", $ruc);
         $stmt->bindParam(":tipo_establecimiento", $tipoEstablecimiento);
+        $stmt->bindParam(":tipo_otro", $tipoEstablecimiento);
         $stmt->bindParam(":nombre_comercial", $nombreComercial);
         $stmt->bindParam(":razon_social", $razonSocial);
 
@@ -199,7 +200,7 @@ class Bodeguero
                     ruc = :ruc,
                     tipo_establecimiento = :tipo_establecimiento,
                     nombre_comercial = :nombre_comercial,
-                    razon_social = :razon_social
+                    razon_social = :razon_social, tipo_establecimiento_otro = IF(:tipo_otro = 'OTRO', 'Establecimiento demo', NULL)
                 WHERE bodeguero_id = :id";
 
         $stmt = $this->conexion->prepare($sql);
@@ -211,6 +212,7 @@ class Bodeguero
         $stmt->bindParam(":telefono", $telefono);
         $stmt->bindParam(":ruc", $ruc);
         $stmt->bindParam(":tipo_establecimiento", $tipoEstablecimiento);
+        $stmt->bindParam(":tipo_otro", $tipoEstablecimiento);
         $stmt->bindParam(":nombre_comercial", $nombreComercial);
         $stmt->bindParam(":razon_social", $razonSocial);
 

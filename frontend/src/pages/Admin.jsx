@@ -1,17 +1,44 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Building2,
+  Image as ImageIcon,
   Pencil,
   Plus,
+  Search,
   ShieldCheck,
   Truck,
+  UploadCloud,
   Users,
   X,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import Operacion from "./Operacion";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../services/api";
 
 const configs = {
+  productos: {
+    title: "Productos",
+    list: "productos_internos",
+    key: "productos",
+    id: "producto_id",
+    create: "registrar_producto",
+    update: "actualizar_producto",
+    remove: "eliminar_producto",
+    roles: ["LOGISTICA"],
+    fields: [
+      ["nombre", "Nombre"],
+      ["codigo_sku", "Código interno"],
+      ["categoria_id", "Categoría", "category"],
+      ["marca", "Marca"],
+      ["unidad_medida", "Presentación"],
+      ["peso_kg", "Peso en kg", "number"],
+      ["precio_base_sugerido", "Precio unitario", "number"],
+      ["descripcion", "Descripción"],
+      ["imagen_archivo", "Imagen del producto", "file"],
+    ],
+  },
   usuarios: {
     title: "Usuarios internos",
     list: "listar",
@@ -37,7 +64,7 @@ const configs = {
     id: "bodeguero_id",
     update: "actualizar_bodeguero",
     remove: "bloquear_bodeguero",
-    roles: ["ADMINISTRADOR", "GESTOR_ATENCION"],
+    roles: ["GESTOR_ATENCION"],
     fields: [
       ["nombre", "Nombres"],
       ["apellidos", "Apellidos"],
@@ -57,7 +84,7 @@ const configs = {
     create: "registrar_proveedor",
     update: "actualizar_proveedor",
     remove: "desactivar_proveedor",
-    roles: ["ADMINISTRADOR", "LOGISTICA"],
+    roles: ["LOGISTICA"],
     fields: [
       ["ruc", "RUC"],
       ["razon_social", "Razón social"],
@@ -82,17 +109,29 @@ const roleNames = {
 
 export default function Admin() {
   const { session } = useAuth();
+  const { pathname } = useLocation();
   const role = session.account.rol;
   const available = useMemo(
     () => Object.keys(configs).filter((k) => configs[k].roles.includes(role)),
     [role],
   );
-  const [tab, setTab] = useState(available[0] || "");
+  const logisticsModule = role === "LOGISTICA" ? pathname.split("/").pop() : "";
+  const managementModule = ["productos", "proveedores"].includes(logisticsModule) ? logisticsModule : "";
+  const operationModule = ["stock", "despachos", "facturas"].includes(logisticsModule) ? logisticsModule : "";
+  const [tab, setTab] = useState(managementModule || available[0] || "");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [modal, setModal] = useState(null);
+  const [confirmRow, setConfirmRow] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [deactivating, setDeactivating] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("Todas");
   const config = configs[tab];
+  useEffect(() => {
+    if (managementModule) setTab(managementModule);
+  }, [managementModule]);
   const load = async () => {
     if (!config) return;
     setLoading(true);
@@ -107,10 +146,17 @@ export default function Admin() {
     }
   };
   // La pestaña determina el contrato de carga; la sesión permanece estable.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     load();
-  }, [tab]);
+    // La carga se repite al cambiar pestaña o identidad autenticada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, session.token]);
+  const filteredRows = useMemo(() => rows.filter((row) => {
+    const matchesSearch = `${row.nombre || ""} ${row.marca || ""} ${row.codigo_sku || ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = category === "Todas" || row.categoria_nombre === category;
+    return matchesSearch && matchesCategory;
+  }), [rows, search, category]);
+  const categories = useMemo(() => ["Todas", ...new Set(rows.map((row) => row.categoria_nombre).filter(Boolean))], [rows]);
   const openCreate = () => setModal({ mode: "create", data: blankFor(config) });
   const openEdit = (row) => {
     const data = { ...row, usuario: row.correo || row.usuario };
@@ -120,12 +166,24 @@ export default function Admin() {
     e.preventDefault();
     const editing = modal.mode === "edit";
     try {
-      await apiRequest(editing ? config.update : config.create, {
+      const { imagen_archivo: imagenArchivo, ...payload } = modal.data;
+      const result = await apiRequest(editing ? config.update : config.create, {
         method: editing ? "PUT" : "POST",
         token: session.token,
         params: editing ? { id: modal.data[config.id] } : undefined,
-        body: modal.data,
+        body: payload,
       });
+      const productoId = editing ? modal.data[config.id] : result.producto_id;
+      if (tab === "productos" && imagenArchivo) {
+        const formData = new FormData();
+        formData.append("imagen", imagenArchivo);
+        await apiRequest("subir_imagen_producto", {
+          method: "POST",
+          token: session.token,
+          params: { id: productoId },
+          body: formData,
+        });
+      }
       setModal(null);
       await load();
     } catch (error) {
@@ -133,22 +191,31 @@ export default function Admin() {
     }
   };
   const deactivate = async (row) => {
-    if (!window.confirm(`¿Confirmas esta acción sobre ${displayName(row)}?`))
-      return;
+    setConfirmRow(row);
+  };
+  const confirmDeactivate = async () => {
+    const row = confirmRow;
+    setDeactivating(true);
     try {
       await apiRequest(config.remove, {
         method: "DELETE",
         token: session.token,
         params: { id: row[config.id] },
       });
+      setConfirmRow(null);
+      setNotice(`${displayName(row)} fue desactivado correctamente.`);
+      window.setTimeout(() => setNotice(""), 3200);
       await load();
     } catch (e) {
       setMessage(e.message);
+    } finally {
+      setDeactivating(false);
     }
   };
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page admin-module-page" key={pathname}>
       <div className="dashboard-wrap">
+        {notice && <div className="admin-toast"><span>✓</span><div><strong>Listo</strong><small>{notice}</small></div></div>}
         <header className="dashboard-welcome">
           <div>
             <span className="role-badge">{roleNames[role]}</span>
@@ -163,7 +230,7 @@ export default function Admin() {
           <Metric
             icon={<Users />}
             label="Módulos habilitados"
-            value={available.length}
+            value={role === "LOGISTICA" ? 5 : available.length}
           />
           <Metric
             icon={<ShieldCheck />}
@@ -172,18 +239,21 @@ export default function Admin() {
           />
           <Metric icon={<Truck />} label="Operación" value="Abastece+" />
         </div>
-        {!config ? (
+        {(role !== "LOGISTICA" || operationModule) && <div id="modulo-operacion" className="admin-module-anchor">
+          <Operacion key={operationModule} role={role} module={operationModule} />
+        </div>}
+        {role === "LOGISTICA" && operationModule ? null : !config ? (
           <section className="panel-card empty-state">
             <Truck size={42} />
-            <h2>Módulo de transporte</h2>
-            <p>
-              El backend recibido autentica este rol, pero aún no expone rutas
-              de despacho para gestionarlas.
-            </p>
+            <h2>Acceso de transporte</h2>
+            <p>Consulta arriba las rutas asignadas a tu usuario.</p>
           </section>
         ) : (
           <>
-            <div className="dashboard-tabs">
+            {role !== "LOGISTICA" && <div
+              id="modulo-gestion"
+              className="dashboard-tabs admin-module-anchor"
+            >
               {available.map((k) => (
                 <button
                   key={k}
@@ -193,7 +263,7 @@ export default function Admin() {
                   {configs[k].title}
                 </button>
               ))}
-            </div>
+            </div>}
             <section className="panel-card">
               <div className="panel-head">
                 <div>
@@ -208,16 +278,17 @@ export default function Admin() {
                   </button>
                 )}
               </div>
+              {tab === "productos" && <div className="product-admin-filters"><label><Search size={18}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar por nombre, marca o código..."/></label><select value={category} onChange={(e)=>setCategory(e.target.value)}>{categories.map((item)=><option key={item}>{item}</option>)}</select></div>}
               {message && <div className="form-message error">{message}</div>}
               {loading ? (
                 <div className="empty-state">Cargando información...</div>
               ) : (
                 <Table
-                  rows={rows}
+                  rows={filteredRows}
                   type={tab}
                   onEdit={openEdit}
                   onRemove={deactivate}
-                  canRemove={role === "ADMINISTRADOR"}
+                  canRemove={Boolean(config.remove)}
                 />
               )}
             </section>
@@ -231,6 +302,7 @@ export default function Admin() {
             onSave={save}
           />
         )}
+        {confirmRow && <ConfirmDeactivate row={confirmRow} busy={deactivating} onCancel={()=>setConfirmRow(null)} onConfirm={confirmDeactivate}/>} 
       </div>
     </main>
   );
@@ -243,6 +315,9 @@ function Metric({ icon, label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+function ConfirmDeactivate({ row, busy, onCancel, onConfirm }) {
+  return createPortal(<div className="modal-backdrop confirmation-backdrop"><section className="modal-card confirmation-modal"><div className="confirmation-icon">!</div><span className="eyebrow">CONFIRMAR ACCIÓN</span><h2>¿Desactivar este registro?</h2><p><strong>{displayName(row)}</strong> dejará de estar disponible. Podrás conservar su información histórica.</p><div className="modal-actions"><button className="action-button secondary" onClick={onCancel} disabled={busy}>Cancelar</button><button className="action-button danger-solid" onClick={onConfirm} disabled={busy}>{busy ? "Desactivando…" : "Sí, desactivar"}</button></div></section></div>, document.body);
 }
 function displayName(r) {
   return (
@@ -260,7 +335,7 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
       </div>
     );
   return (
-    <div className="data-table-wrap">
+    <div className="data-table-wrap animated-table">
       <table className="data-table">
         <thead>
           <tr>
@@ -272,8 +347,16 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.usuario_interno_id || r.bodeguero_id || r.proveedor_id}>
+          {rows.map((r, index) => (
+            <tr
+              style={{ "--row-delay": `${Math.min(index, 12) * 35}ms` }}
+              key={
+                r.usuario_interno_id ||
+                r.bodeguero_id ||
+                r.proveedor_id ||
+                r.producto_id
+              }
+            >
               <td>
                 <strong>{displayName(r)}</strong>
                 <br />
@@ -281,11 +364,13 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
                   {r.razon_social && r.nombre_comercial ? r.razon_social : ""}
                 </small>
               </td>
-              <td>{r.ruc || `#${r.usuario_interno_id}`}</td>
+              <td>{r.codigo_sku || r.ruc || `#${r.usuario_interno_id}`}</td>
               <td>
-                {r.correo}
+                {r.producto_id
+                  ? `S/ ${Number(r.precio_base_sugerido).toFixed(2)}`
+                  : r.correo}
                 <br />
-                <small>{r.telefono}</small>
+                <small>{r.producto_id ? r.categoria_nombre : r.telefono}</small>
               </td>
               <td>
                 <span
@@ -333,7 +418,7 @@ function Editor({ config, modal, setModal, onSave }) {
       data: { ...v.data, [e.target.name]: e.target.value },
       error: "",
     }));
-  return (
+  return createPortal(
     <div className="modal-backdrop">
       <section className="modal-card">
         <div className="modal-head">
@@ -357,6 +442,7 @@ function Editor({ config, modal, setModal, onSave }) {
                 type={type}
                 value={modal.data[name] ?? ""}
                 onChange={change}
+                currentImage={modal.data.imagen_url}
               />
             ))}
           {modal.error && (
@@ -374,10 +460,14 @@ function Editor({ config, modal, setModal, onSave }) {
           </div>
         </form>
       </section>
-    </div>
+    </div>, document.body
   );
 }
-function Field({ name, label, type, value, onChange }) {
+function Field({ name, label, type, value, onChange, currentImage }) {
+  if (type === "file")
+    return (
+      <ImageDropZone name={name} label={label} file={value} currentImage={currentImage} onChange={onChange} />
+    );
   if (type === "role")
     return (
       <label className="form-field">
@@ -391,6 +481,10 @@ function Field({ name, label, type, value, onChange }) {
         </select>
       </label>
     );
+  if (type === "category")
+    return (
+      <label className="form-field"><span>{label}</span><select name={name} value={value} onChange={onChange} required><option value="">Selecciona una categoría</option><option value="1">Abarrotes</option><option value="2">Bebidas</option><option value="3">Limpieza</option><option value="4">Cuidado Personal</option></select></label>
+    );
   if (type === "business")
     return (
       <label className="form-field">
@@ -399,7 +493,7 @@ function Field({ name, label, type, value, onChange }) {
           <option value="BODEGA">Bodega</option>
           <option value="MINIMARKET">Minimarket</option>
           <option value="MARKET_LOCAL">Market local</option>
-          <option value="OTROS">Otro</option>
+          <option value="OTRO">Otro</option>
         </select>
       </label>
     );
@@ -411,8 +505,81 @@ function Field({ name, label, type, value, onChange }) {
         value={value}
         onChange={onChange}
         type={type || "text"}
+        step={type === "number" ? "any" : undefined}
         required
       />
     </label>
+  );
+}
+
+function ImageDropZone({ name, label, file, currentImage, onChange }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const preview = useMemo(
+    () =>
+      file instanceof File ? URL.createObjectURL(file) : currentImage || "",
+    [file, currentImage],
+  );
+
+  useEffect(() => {
+    if (!(file instanceof File)) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [file, preview]);
+
+  const selectFile = (selected) => {
+    if (selected) onChange({ target: { name, value: selected } });
+  };
+  const drop = (event) => {
+    event.preventDefault();
+    setDragging(false);
+    selectFile(event.dataTransfer.files?.[0]);
+  };
+
+  return (
+    <div className="form-field image-upload-field">
+      <span>{label}</span>
+      <div
+        className={`image-drop-zone ${dragging ? "is-dragging" : ""} ${preview ? "has-preview" : ""}`}
+        onClick={() => inputRef.current?.click()}
+        onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => setDragging(false)}
+        onDrop={drop}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        <input
+          ref={inputRef}
+          className="image-drop-zone__input"
+          name={name}
+          onChange={(event) => selectFile(event.target.files?.[0])}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+        />
+        {preview ? (
+          <div className="image-drop-zone__preview">
+            <img src={preview} alt="Vista previa del producto" />
+            <div>
+              <ImageIcon size={22} />
+              <strong>{file?.name || "Imagen actual del producto"}</strong>
+              <small>Haz clic o arrastra otra imagen para reemplazarla</small>
+            </div>
+          </div>
+        ) : (
+          <div className="image-drop-zone__empty">
+            <span className="image-drop-zone__icon"><UploadCloud size={28} /></span>
+            <strong>Arrastra y suelta la imagen aquí</strong>
+            <small>o haz clic para seleccionarla desde tu equipo</small>
+          </div>
+        )}
+      </div>
+      <small className="image-upload-field__help">PNG, JPG o WEBP · máximo 5 MB</small>
+    </div>
   );
 }

@@ -31,7 +31,6 @@ class CategoriaController
         if (
             isset($payload["rol"]) &&
             in_array($payload["rol"], [
-                "ADMINISTRADOR",
                 "LOGISTICA"
             ])
         ) {
@@ -50,7 +49,6 @@ class CategoriaController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -179,7 +177,6 @@ class CategoriaController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -263,7 +260,6 @@ class CategoriaController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -317,7 +313,7 @@ class CategoriaController
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "LOGISTICA"
         ]);
 
         $categoria = $this->categoria->buscarPorId($id);

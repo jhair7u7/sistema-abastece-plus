@@ -15,7 +15,6 @@ class Direccion
         $sql = "SELECT
                     d.direccion_id,
                     d.bodeguero_id,
-                    d.proveedor_id,
                     d.departamento,
                     d.provincia,
                     d.distrito,
@@ -24,12 +23,10 @@ class Direccion
                     d.zona_reparto,
                     d.codigo_postal,
                     b.nombre_comercial AS nombre_bodeguero,
-                    p.nombre_comercial AS nombre_proveedor
+                    b.nombre_comercial AS comercio
                 FROM direcciones d
                 LEFT JOIN bodegueros b
                     ON d.bodeguero_id = b.bodeguero_id
-                LEFT JOIN proveedores p
-                    ON d.proveedor_id = p.proveedor_id
                 ORDER BY d.direccion_id DESC";
 
         $stmt = $this->conn->prepare($sql);
@@ -44,7 +41,6 @@ class Direccion
         $sql = "SELECT
                     d.direccion_id,
                     d.bodeguero_id,
-                    d.proveedor_id,
                     d.departamento,
                     d.provincia,
                     d.distrito,
@@ -53,12 +49,10 @@ class Direccion
                     d.zona_reparto,
                     d.codigo_postal,
                     b.nombre_comercial AS nombre_bodeguero,
-                    p.nombre_comercial AS nombre_proveedor
+                    b.nombre_comercial AS comercio
                 FROM direcciones d
                 LEFT JOIN bodegueros b
                     ON d.bodeguero_id = b.bodeguero_id
-                LEFT JOIN proveedores p
-                    ON d.proveedor_id = p.proveedor_id
                 WHERE d.direccion_id = :id";
 
         $stmt = $this->conn->prepare($sql);
@@ -74,7 +68,6 @@ class Direccion
         $sql = "SELECT
                     direccion_id,
                     bodeguero_id,
-                    proveedor_id,
                     departamento,
                     provincia,
                     distrito,
@@ -93,37 +86,11 @@ class Direccion
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // LISTAR DIRECCIONES DE UN PROVEEDOR
-    public function listarPorProveedor($proveedorId)
-    {
-        $sql = "SELECT
-                    direccion_id,
-                    bodeguero_id,
-                    proveedor_id,
-                    departamento,
-                    provincia,
-                    distrito,
-                    direccion_exacta,
-                    referencia,
-                    zona_reparto,
-                    codigo_postal
-                FROM direcciones
-                WHERE proveedor_id = :proveedor_id
-                ORDER BY direccion_id DESC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindValue(":proveedor_id", $proveedorId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
     // CREAR DIRECCIÓN
     public function crear($datos)
     {
         $sql = "INSERT INTO direcciones (
                     bodeguero_id,
-                    proveedor_id,
                     departamento,
                     provincia,
                     distrito,
@@ -133,7 +100,6 @@ class Direccion
                     codigo_postal
                 ) VALUES (
                     :bodeguero_id,
-                    :proveedor_id,
                     :departamento,
                     :provincia,
                     :distrito,
@@ -151,11 +117,6 @@ class Direccion
             isset($datos["bodeguero_id"]) ? PDO::PARAM_INT : PDO::PARAM_NULL
         );
 
-        $stmt->bindValue(
-            ":proveedor_id",
-            $datos["proveedor_id"] ?? null,
-            isset($datos["proveedor_id"]) ? PDO::PARAM_INT : PDO::PARAM_NULL
-        );
 
         $stmt->bindValue(":departamento", $datos["departamento"] ?? "Lima");
         $stmt->bindValue(":provincia", $datos["provincia"] ?? "Lima");

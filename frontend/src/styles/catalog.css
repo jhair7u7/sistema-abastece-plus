@@ -7,7 +7,7 @@
 }
 
 .catalog-container {
-  max-width: 1200px;
+  max-width: 1680px;
 
   margin: auto;
 
@@ -15,13 +15,14 @@
 
   display: flex;
 
-  gap: 40px;
+  gap: 28px;
 }
 
 /* SIDEBAR */
 
 .catalog-sidebar {
-  width: 240px;
+  width: 220px;
+  flex: 0 0 220px;
 
   background: white;
 
@@ -93,8 +94,8 @@
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
 }
 
 /* CARD */
@@ -102,11 +103,13 @@
 .product-card {
   background: white;
   border-radius: 25px;
-  padding: 22px;
+  padding: 17px;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   transition: 0.3s;
+  overflow: hidden;
 }
+.sold-out-ribbon{position:absolute;z-index:3;top:24px;left:-38px;width:150px;text-align:center;transform:rotate(-42deg);padding:7px;background:#64748b;color:white;font-size:11px;font-weight:900;letter-spacing:.12em;box-shadow:0 4px 12px rgba(15,23,42,.2)}
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
@@ -128,7 +131,7 @@
 }
 
 .product-image {
-  height: 220px;
+  height: 165px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -140,12 +143,12 @@
 .product-image img {
   width: 100%;
   height: 100%;
-  max-height: 200px;
+  max-height: 155px;
   object-fit: contain;
 }
 .product-card h3 {
-  font-size: 18px;
-  height: 50px;
+  font-size: 16px;
+  min-height: 42px;
   color: #0f172a;
 }
 
@@ -170,7 +173,7 @@
 .price-box {
   background: #f1f5f9;
 
-  padding: 15px;
+  padding: 12px;
 
   border-radius: 15px;
 
@@ -186,7 +189,7 @@
 .price-box strong {
   display: block;
 
-  font-size: 25px;
+  font-size: 21px;
 
   color: #5b21b6;
 }
@@ -279,9 +282,12 @@
   margin-bottom: 8px;
 }
 .cart-button:disabled {
-  opacity: 0.5;
+  opacity: 1;
+  background:#94a3b8;
+  color:#e2e8f0;
   cursor: not-allowed;
 }
+.quantity-control button:disabled{opacity:.45;cursor:not-allowed}
 
 /* Entrada propia del catálogo y barrido reiniciable por categoría */
 .catalog-sidebar {

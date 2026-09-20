@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect } from "react";
 import {
   BrowserRouter as Router,
+  Navigate,
   Routes,
   Route,
   useLocation,
@@ -13,14 +14,15 @@ import ComoFunciona from "./pages/ComoFunciona";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Portal from "./pages/Portal";
-import Admin from "./pages/Admin";
+import AdminPortal from "./components/AdminPortal";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Footer from "./components/Footer";
 import { CartProvider } from "./context/CartContext";
 import CartBar from "./components/CartBar";
 import Checkout from "./pages/Checkout";
 import Pago from "./pages/Pago";
+import AdminNavbar from "./components/AdminNavbar";
 
 function PageMotion() {
   const { pathname } = useLocation();
@@ -64,17 +66,34 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <PageMotion />
-          <Navbar />
-          <CartBar />
-          <Routes>
+          <ApplicationShell />
+        </CartProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+function ApplicationShell() {
+  const { pathname } = useLocation();
+  const { session } = useAuth();
+  const isAdmin = pathname.startsWith("/admin");
+  const showAdminNavbar = isAdmin && pathname !== "/admin/login" && session?.type === "interno";
+
+  return (
+    <>
+      {showAdminNavbar ? <AdminNavbar /> : !isAdmin && <Navbar />}
+      {!isAdmin && <CartBar />}
+      <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/nosotros" element={<Nosotros />} />
             <Route path="/como-funciona" element={<ComoFunciona />} />
             <Route path="/registro" element={<Registro />} />
             <Route path="/ingresar" element={<Login />} />
+            <Route path="/admin/login" element={<Login internal />} />
+            <Route path="/mi-negocio" element={<Navigate to="/tienda" replace />} />
             <Route
-              path="/mi-negocio"
+              path="/tienda"
               element={
                 <ProtectedRoute>
                   <Portal />
@@ -82,13 +101,16 @@ function App() {
               }
             />
             <Route
-              path="/admin"
+              path="/admin/*"
               element={
                 <ProtectedRoute internal>
-                  <Admin />
+                  <AdminPortal />
                 </ProtectedRoute>
               }
             />
+            <Route path="/tienda/catalogo" element={<ProtectedRoute><Catalogo /></ProtectedRoute>} />
+            <Route path="/tienda/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+            <Route path="/tienda/pago" element={<ProtectedRoute><Pago /></ProtectedRoute>} />
             <Route
               path="/checkout"
               element={
@@ -107,11 +129,9 @@ function App() {
               }
             />
             <Route path="*" element={<Home />} />
-          </Routes>
-          <Footer />
-        </CartProvider>
-      </AuthProvider>
-    </Router>
+      </Routes>
+      {!isAdmin && <Footer />}
+    </>
   );
 }
 

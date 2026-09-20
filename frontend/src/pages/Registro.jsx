@@ -129,7 +129,7 @@ export default function Registro() {
                 <option value="BODEGA">Bodega</option>
                 <option value="MINIMARKET">Minimarket</option>
                 <option value="MARKET_LOCAL">Market local</option>
-                <option value="OTROS">Otro</option>
+                <option value="OTRO">Otro</option>
               </select>
             </label>
             {status.message && (

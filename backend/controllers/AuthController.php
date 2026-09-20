@@ -36,9 +36,9 @@ class AuthController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        if (!hash_equals($usuario["password_hash"], $passwordHash)) {
+        if (!$usuario["activo"] || !password_verify($password, $usuario["password_hash"])) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
             ], 401);
@@ -55,7 +55,8 @@ class AuthController
                 "apellidos" => $usuario["apellidos"],
                 "correo" => $usuario["correo"],
                 "telefono" => $usuario["telefono"],
-                "rol" => $usuario["rol"]
+                "rol" => $usuario["rol"],
+                "tipo_usuario" => "interno"
             ]
         ], 200);
     }
@@ -81,9 +82,9 @@ class AuthController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        if (!hash_equals($bodeguero["password_hash"], $passwordHash)) {
+        if (!password_verify($password, $bodeguero["password_hash"])) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
             ], 401);
@@ -173,7 +174,7 @@ class AuthController
         }
 
         // Convertir contraseña a SHA-256
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         // Registrar usuario
         $resultado = $this->usuario->registrar(

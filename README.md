@@ -28,11 +28,15 @@ Aplicación B2B con frontend React/Vite y API PHP/MySQL.
 
 Vite publica el sitio en `http://localhost:5173` y redirige `/api` a la API local.
 
-## Accesos de prueba incluidos en la base
+## Accesos de prueba "usuarios internos" incluidos en la base
 
-- Administrador: `admin@abasteceplus.pe` / `admin123`
-- Transportista: `transporte1@abasteceplus.pe` / `transporte123`
-- Atención: `atencion.soporte@abasteceplus.pe` / `atencion123`
-- Logística: `logistica@abasteceplus.pe` / `logistica123`
+- Administrador: `administrador@abastece.com` / `admin123`
+- Transportista: `transporte1@abastece.com` / `transporte123`
+- Atención: `atencion.soporte@abastece.com` / `atencion123`
+- Logística: `logistica@abastece.com` / `logistica123`
+
+## Accesos de prueba "bodeguero" incluido en la base
+
+- bodeguero 1: `bodegueros1@example.test` / `rosa123`
 
 Los comerciantes nuevos se registran desde `/registro`. La base de ejemplo contiene comerciantes históricos con hashes bcrypt incompatibles con el backend SHA-256 actual; para probar el acceso de comerciante debe crearse una cuenta desde el formulario.

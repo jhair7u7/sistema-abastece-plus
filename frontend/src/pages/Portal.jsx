@@ -1,98 +1,19 @@
-import { Building2, CircleDollarSign, ShoppingBag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Building2, Gift, PackageCheck, ReceiptText, Sparkles, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../services/api";
 
-export default function Portal() {
-  const { session } = useAuth();
-  const user = session.account;
-  const max = Number(user.linea_credito_max || 0);
-  const used = Number(user.credito_utilizado || 0);
-  const available = Math.max(0, max - used);
-  const percent = max ? Math.min(100, (used / max) * 100) : 0;
-  return (
-    <main className="dashboard-page">
-      <div className="dashboard-wrap">
-        <header className="dashboard-welcome">
-          <div>
-            <span className="role-badge">Comerciante afiliado</span>
-            <h1>Hola, {user.nombre}</h1>
-            <p>Este es el centro de control de {user.nombre_comercial}.</p>
-          </div>
-          <span
-            className={`status-badge ${user.estado_cuenta === "BLOQUEADO" ? "blocked" : "active"}`}
-          >
-            {String(user.estado_cuenta).replaceAll("_", " ")}
-          </span>
-        </header>
-        <div className="metric-grid">
-          <div className="metric-card">
-            <div className="metric-icon">
-              <Building2 />
-            </div>
-            <small>Tu comercio</small>
-            <strong>{user.tipo_establecimiento?.replaceAll("_", " ")}</strong>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">
-              <CircleDollarSign />
-            </div>
-            <small>Crédito disponible</small>
-            <strong>S/ {available.toFixed(2)}</strong>
-          </div>
-          <div className="metric-card">
-            <div className="metric-icon">
-              <ShoppingBag />
-            </div>
-            <small>Catálogo</small>
-            <strong>Mayorista B2B</strong>
-          </div>
-        </div>
-        <div className="portal-grid">
-          <section className="panel-card business-hero">
-            <h2>Abastece tu tienda</h2>
-            <p>
-              Explora productos seleccionados para comercios y encuentra
-              presentaciones mayoristas.
-            </p>
-            <Link className="action-button" to="/catalogo">
-              Ver catálogo
-            </Link>
-          </section>
-          <section className="panel-card">
-            <h2>Línea de crédito</h2>
-            <div className="credit-bar">
-              <i style={{ width: `${percent}%` }} />
-            </div>
-            <small>
-              S/ {used.toFixed(2)} utilizados de S/ {max.toFixed(2)}
-            </small>
-          </section>
-          <section className="panel-card">
-            <h2>Datos de la tienda</h2>
-            <div className="profile-list">
-              <Row k="Razón social" v={user.razon_social} />
-              <Row k="RUC" v={user.ruc} />
-              <Row k="Correo" v={user.correo} />
-              <Row k="Teléfono" v={user.telefono} />
-            </div>
-          </section>
-          <section className="panel-card">
-            <h2>Estado de afiliación</h2>
-            <p style={{ color: "#64748b", lineHeight: 1.7, marginTop: 14 }}>
-              Tu cuenta fue creada correctamente. La activación y el crédito son
-              gestionados por el equipo de Abastece+.
-            </p>
-          </section>
-        </div>
-      </div>
-    </main>
-  );
+const steps=["ASIGNADO","EN_TRAYECTO","ENTREGADO"];
+export default function Portal(){
+ const {session}=useAuth();const user=session.account;const [orders,setOrders]=useState([]);const [detail,setDetail]=useState(null);const [error,setError]=useState("");
+ useEffect(()=>{apiRequest("mis_pedidos",{token:session.token}).then(d=>setOrders(d.datos)).catch(e=>setError(e.message));},[session.token]);
+ const open=async id=>{try{const d=await apiRequest("detalle_pedido",{token:session.token,params:{id}});setDetail(d.datos);}catch(e){setError(e.message);}};
+ return <main className="dashboard-page merchant-dashboard"><div className="dashboard-wrap"><header className="merchant-hero"><div><span className="role-badge"><Sparkles size={14}/> Comerciante afiliado</span><h1>Hola, {user.nombre}</h1><p>Todo lo que necesitas para gestionar las compras de {user.nombre_comercial}.</p></div><div className="merchant-hero__badge"><PackageCheck/><span>{orders.length}</span><small>pedidos registrados</small></div></header>
+ <div className="metric-grid"><Metric icon={<Building2/>} label="Tu comercio" value={user.tipo_establecimiento?.replaceAll("_"," ")}/><Metric icon={<ReceiptText/>} label="Compras realizadas" value={orders.length}/><Metric icon={<Gift/>} label="Beneficio activo" value="Afiliado Plus"/></div>
+ <section className="panel-card orders-panel"><div className="panel-head"><div><span className="eyebrow">HISTORIAL</span><h2>Mis pedidos</h2><p>Selecciona una fila para ver productos, entrega y seguimiento.</p></div></div>{error&&<div className="form-message error">{error}</div>}<div className="data-table-wrap"><table className="data-table orders-table"><thead><tr><th>Pedido</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Entrega</th></tr></thead><tbody>{orders.map(o=><tr key={o.compra_id} onClick={()=>open(o.compra_id)} tabIndex="0"><td><strong>{o.codigo_compra}</strong></td><td>{new Date(o.fecha_compra).toLocaleString("es-PE")}</td><td>{o.productos} líneas</td><td><strong>S/ {Number(o.total).toFixed(2)}</strong></td><td><span className="status-badge active">{o.estado_entrega}</span></td></tr>)}</tbody></table></div></section>
+ <div className="portal-grid merchant-info-grid"><section className="panel-card"><span className="eyebrow">TU NEGOCIO</span><h2>Datos de la tienda</h2><div className="profile-list"><Row k="Razón social" v={user.razon_social}/><Row k="RUC" v={user.ruc}/><Row k="Correo" v={user.correo}/><Row k="Teléfono" v={user.telefono}/></div></section><section className="panel-card loyalty-card"><Gift size={34}/><span className="eyebrow">BENEFICIOS POR ANTIGÜEDAD</span><h2>Cupones para tu próxima compra</h2><div className="coupon"><b>ABASTECE10</b><span>10% de descuento</span></div><div className="coupon"><b>ENVIOPLUS</b><span>Envío prioritario demo</span></div><small>Cupones simulados para fines académicos.</small></section></div></div>
+ {detail&&<OrderModal order={detail} close={()=>setDetail(null)}/>}</main>;
 }
-function Row({ k, v }) {
-  return (
-    <div className="profile-row">
-      <span>{k}</span>
-      <strong>{v || "—"}</strong>
-    </div>
-  );
-}
+function Metric({icon,label,value}){return <div className="metric-card merchant-metric"><div className="metric-icon">{icon}</div><small>{label}</small><strong>{value}</strong></div>}
+function Row({k,v}){return <div className="profile-row"><span>{k}</span><strong>{v||"—"}</strong></div>}
+function OrderModal({order,close}){const current=order.estado_entrega;const failed=current==="FALLIDO";const activeIndex=failed?1:steps.indexOf(current);return <div className="modal-backdrop"><section className="modal-card order-detail-modal"><div className="modal-head"><div><span className="eyebrow">DETALLE DE COMPRA</span><h2>{order.codigo_compra}</h2></div><button className="icon-button" onClick={close}><X/></button></div><div className="order-detail-meta"><div><small>Comprador</small><strong>{order.comprador}</strong></div><div><small>Fecha y hora</small><strong>{new Date(order.fecha_compra).toLocaleString("es-PE")}</strong></div><div><small>Dirección de entrega</small><strong>{order.direccion_exacta}, {order.distrito}</strong></div><div><small>Pago simulado</small><strong>{order.metodo_pago||"Pendiente"}</strong></div></div><div className="order-timeline">{steps.map((s,i)=><div key={s} className={i<=activeIndex&&!failed?"done":""}><i>{i+1}</i><span>{s.replaceAll("_"," ")}</span></div>)}{failed&&<div className="failed"><i>!</i><span>FALLIDO</span></div>}</div><div className="order-items">{order.items.map((i,n)=><div key={n}><img src={i.imagen_url||"/logo.png"} alt=""/><span><strong>{i.nombre}</strong><small>{i.cantidad} × S/ {Number(i.precio_unitario).toFixed(2)}</small></span><b>S/ {Number(i.total_linea).toFixed(2)}</b></div>)}</div><div className="order-totals"><span>Subtotal <b>S/ {Number(order.subtotal).toFixed(2)}</b></span><span>IGV <b>S/ {Number(order.igv).toFixed(2)}</b></span><strong>Total <b>S/ {Number(order.total).toFixed(2)}</b></strong></div></section></div>}

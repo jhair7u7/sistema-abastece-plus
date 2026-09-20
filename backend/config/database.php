@@ -32,9 +32,9 @@ if (is_file($envPath) && is_readable($envPath)) {
 
 $host = getenv("DB_HOST") ?: "localhost";
 $port = getenv("DB_PORT") ?: "3306";
-$dbname = getenv("DB_NAME") ?: "abastece_plus_db";
+$dbname = getenv("DB_NAME") ?: "abastece_nuevo";
 $username = getenv("DB_USER") ?: "root";
-$password = getenv("DB_PASSWORD") ?: "luz123";
+$password = getenv("DB_PASSWORD") ?: "1234";
 
 try {
     $conexion = new PDO(

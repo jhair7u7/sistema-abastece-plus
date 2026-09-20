@@ -65,7 +65,7 @@ class BodegueroController
             "BODEGA",
             "MINIMARKET",
             "MARKET_LOCAL",
-            "OTROS"
+            "OTRO"
         ];
 
         if (!in_array($tipoEstablecimiento, $tiposPermitidos)) {
@@ -75,7 +75,7 @@ class BodegueroController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $resultado = $this->bodeguero->registrar(
             $nombre,
@@ -139,9 +139,9 @@ class BodegueroController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        if (!hash_equals($bodeguero["password_hash"], $passwordHash)) {
+        if (!password_verify($password, $bodeguero["password_hash"])) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
             ], 401);
@@ -182,7 +182,6 @@ class BodegueroController
     public function listar()
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "GESTOR_ATENCION"
         ]);
 
@@ -199,7 +198,6 @@ class BodegueroController
     public function buscar($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "GESTOR_ATENCION"
         ]);
 
@@ -230,7 +228,7 @@ class BodegueroController
     public function actualizar($id, $datos)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "GESTOR_ATENCION"
         ]);
 
         if (!$id || !is_numeric($id)) {
@@ -302,7 +300,7 @@ class BodegueroController
             "BODEGA",
             "MINIMARKET",
             "MARKET_LOCAL",
-            "OTROS"
+            "OTRO"
         ];
 
         if (!in_array($tipoEstablecimiento, $tiposPermitidos)) {
@@ -341,7 +339,7 @@ class BodegueroController
     public function bloquear($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "GESTOR_ATENCION"
         ]);
 
         if (!$id || !is_numeric($id)) {

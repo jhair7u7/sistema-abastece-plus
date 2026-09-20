@@ -1,102 +1,23 @@
-import { CreditCard, CheckCircle, ShoppingCart } from "lucide-react";
-import { useState } from "react";
+import { Banknote, CheckCircle, CreditCard, QrCode, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../services/api";
 
-export default function Pago() {
-  const { total, clearCart } = useCart();
-
-  const [status, setStatus] = useState("form");
-
-  function pagar(e) {
-    e.preventDefault();
-
-    setStatus("loading");
-
-    setTimeout(() => {
-      clearCart();
-
-      setStatus("success");
-    }, 3000);
-  }
-
-  if (status === "loading") {
-    return (
-      <main className="payment-page">
-        <div className="payment-animation">
-          <div className="loader-circle"></div>
-
-          <h1>Verificando compra...</h1>
-
-          <p>Estamos validando los datos de tu pago</p>
-
-          <div className="payment-steps">
-            <span className="active">✓ Datos recibidos</span>
-
-            <span>✓ Validando tarjeta</span>
-
-            <span>✓ Confirmando operación</span>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (status === "success") {
-    return (
-      <main className="payment-page">
-        <div className="payment-success-animation">
-          <div className="success-circle">
-            <CheckCircle size={65} />
-          </div>
-
-          <h1>¡Pago exitoso!</h1>
-
-          <p>Tu compra fue procesada correctamente.</p>
-
-          <div className="order-message">🛒 Pedido generado correctamente</div>
-
-          <button onClick={() => (window.location.href = "/catalogo")}>
-            Continuar comprando
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="payment-page">
-      <form className="payment-card" onSubmit={pagar}>
-        <div className="payment-header">
-          <CreditCard size={35} />
-
-          <h1>Método de pago</h1>
-        </div>
-
-        <select>
-          <option>Tarjeta débito/crédito</option>
-        </select>
-
-        <input required placeholder="Número de tarjeta" />
-
-        <input required placeholder="Nombre del titular" />
-
-        <div className="payment-row">
-          <input required placeholder="MM/AA" />
-
-          <input required placeholder="CVV" />
-        </div>
-
-        <div className="payment-total">
-          <span>Total:</span>
-
-          <strong>S/ {total.toFixed(2)}</strong>
-        </div>
-
-        <button>
-          <ShoppingCart size={18} />
-          Pagar compra
-        </button>
-      </form>
-    </main>
-  );
+const methods=[{id:"TARJETA",label:"Tarjeta",icon:CreditCard},{id:"YAPE",label:"Yape",icon:QrCode},{id:"EFECTIVO",label:"Efectivo",icon:Banknote}];
+export default function Pago(){
+ const {cart,total,clearCart}=useCart();const {session}=useAuth();const navigate=useNavigate();
+ const [method,setMethod]=useState("TARJETA"),[cards,setCards]=useState([]),[number,setNumber]=useState(""),[status,setStatus]=useState("form"),[result,setResult]=useState(null),[error,setError]=useState("");
+ useEffect(()=>{apiRequest("tarjetas_prueba",{token:session.token}).then(d=>setCards(d.datos)).catch(e=>setError(e.message));},[session.token]);
+ const normalized=number.replace(/\D/g,"");const selected=useMemo(()=>cards.find(c=>c.numero.replace(/\D/g,"")===normalized),[cards,normalized]);
+ const formatCard=value=>value.replace(/\D/g,"").slice(0,16).replace(/(.{4})/g,"$1 ").trim();
+ async function pagar(e){e.preventDefault();if(!cart.length)return;setError("");if(method==="TARJETA"&&!selected){setError("Ingresa una de las tarjetas simuladas disponibles.");return;}setStatus("loading");try{const d=await apiRequest("crear_compra",{method:"POST",token:session.token,body:{metodo_pago:method,tarjeta_id:selected?.tarjeta_id,items:cart.map(i=>({producto_id:i.producto_id,cantidad:i.cantidad}))}});setResult(d.datos);clearCart();setStatus("success");}catch(err){setError(err.message);setStatus("form");}}
+ if(status==="loading")return <main className="payment-page"><div className="payment-animation"><div className="loader-circle"/><h1>Procesando simulación...</h1><p>Estamos registrando tu pedido de prueba.</p></div></main>;
+ if(status==="success")return <main className="payment-page"><div className="payment-success-animation"><div className="success-circle"><CheckCircle size={65}/></div><span className="demo-pill">OPERACIÓN SIMULADA</span><h1>Pedido registrado</h1><p>{result?.codigo_compra}</p><div className="order-message">Código de operación: {result?.codigo_operacion}</div><button onClick={()=>navigate("/tienda")}>Ver mis pedidos</button></div></main>;
+ return <main className="payment-page"><form className="payment-card payment-card--wide" onSubmit={pagar}><div className="payment-header"><CreditCard size={35}/><div><small>PAGO 100% SIMULADO</small><h1>Elige cómo pagar</h1></div></div><div className="payment-methods">{methods.map(({id,label,icon:Icon})=><button type="button" key={id} className={method===id?"active":""} onClick={()=>setMethod(id)}><Icon size={20}/>{label}</button>)}</div>
+ {method==="TARJETA"&&<><div className="demo-cards"><span>Tarjetas de prueba:</span>{cards.map(c=><button type="button" key={c.tarjeta_id} onClick={()=>setNumber(c.numero)}>{c.banco} • {c.ultimos_digitos}</button>)}</div><div className="card-payment-layout"><div><label>Número de tarjeta<input required value={number} onChange={e=>setNumber(formatCard(e.target.value))} placeholder="0000 0000 0000 0000"/></label><label>Titular<input required value={selected?.titular||""} readOnly placeholder="Se completará automáticamente"/></label><div className="payment-row"><input required value={selected?.vencimiento||""} readOnly placeholder="MM/AA"/><input required value={selected?"•••":""} readOnly placeholder="CVV"/></div></div><div className="bank-card-preview" style={{background:selected?`linear-gradient(135deg,${selected.color_inicio},${selected.color_fin})`:undefined}}><span>{selected?.banco||"BANCO DEMO"}</span><b>{selected?.marca||"TARJETA"}</b><strong>{number||"•••• •••• •••• ••••"}</strong><small>{selected?.titular||"TITULAR DE PRUEBA"}</small></div></div></>}
+ {method==="YAPE"&&<div className="alternative-payment yape-sim"><div className="fake-qr"><QrCode size={95}/></div><div><h3>Yape de demostración</h3><p>Escanea el código simulado o usa el número <b>999 888 777</b>.</p><input required placeholder="Código de aprobación (ej. 123456)" maxLength="6"/></div></div>}
+ {method==="EFECTIVO"&&<div className="alternative-payment"><span className="cash-icon"><Banknote size={36}/></span><div><h3>Pago contra entrega</h3><p>Entrega el monto exacto al transportista durante la simulación.</p></div></div>}
+ {error&&<div className="form-message error">{error}</div>}<div className="payment-total"><span>Total del pedido</span><strong>S/ {total.toFixed(2)}</strong></div><button className="payment-submit"><ShieldCheck size={18}/>Confirmar pedido simulado</button></form></main>;
 }

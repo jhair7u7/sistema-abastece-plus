@@ -228,3 +228,199 @@
     animation: none;
   }
 }
+
+/* =========================================================
+   LOGIN INTERNO ABASTECE+
+   Estos estilos SOLO afectan al portal de colaboradores
+========================================================= */
+
+.auth-page.auth-page--internal {
+  position: relative;
+  min-height: 100vh;
+  padding: 120px 20px;
+
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(139, 92, 246, 0.14),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      rgba(236, 72, 153, 0.08),
+      transparent 30%
+    ),
+    linear-gradient(135deg, #100b1d 0%, #171026 38%, #1d1233 68%, #24143d 100%) !important;
+
+  background-size: 140% 140% !important;
+  animation: internal-background 12s ease infinite;
+}
+
+/* Contenedor del login interno */
+
+.auth-shell--internal {
+  position: relative;
+
+  /* Quitamos el contorno blanco */
+  border: none;
+
+  box-shadow:
+    0 30px 80px rgba(10, 0, 30, 0.42),
+    0 0 50px rgba(124, 58, 237, 0.12);
+}
+
+/* Panel izquierdo */
+
+.auth-page--internal .auth-aside--internal {
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(255, 255, 255, 0.1),
+      transparent 30%
+    ),
+    linear-gradient(155deg, #252a50 0%, #343071 38%, #4c2b9b 70%, #6d28d9 100%) !important;
+
+  background-size: 180% 180% !important;
+  animation: auth-gradient 8s ease infinite;
+}
+
+/* Marca superior */
+
+.auth-page--internal .internal-login-brand {
+  position: relative;
+  z-index: 2;
+
+  max-width: 1050px;
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  color: white;
+}
+
+.auth-page--internal .internal-login-brand span {
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.auth-page--internal .internal-login-brand small {
+  color: #ddd6fe;
+  font-size: 13px;
+
+  padding: 6px 11px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  backdrop-filter: blur(8px);
+}
+
+/* Tarjeta derecha */
+
+.auth-page--internal .auth-card {
+  background: linear-gradient(145deg, #ffffff, #faf8ff);
+}
+
+/* Título */
+
+.auth-page--internal .auth-card-header h2 {
+  color: #24123f;
+}
+
+/* Inputs */
+
+.auth-page--internal .form-field input {
+  border-color: #ded6eb;
+  background: #faf9fc;
+}
+
+.auth-page--internal .form-field input:hover {
+  border-color: #c4b5fd;
+}
+
+.auth-page--internal .form-field input:focus {
+  border-color: #8b5cf6;
+
+  background: white;
+
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14);
+}
+
+/* Botón interno */
+
+.auth-page--internal .form-submit {
+  background: linear-gradient(90deg, #5b21b6, #7c3aed, #9333ea);
+
+  background-size: 180% 100%;
+
+  box-shadow: 0 10px 25px rgba(91, 33, 182, 0.28);
+}
+
+.auth-page--internal .form-submit:hover:not(:disabled) {
+  background-position: 100% 0;
+
+  box-shadow: 0 15px 32px rgba(91, 33, 182, 0.4);
+}
+
+/* Movimiento suave del fondo */
+
+@keyframes internal-background {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Responsive */
+
+@media (max-width: 800px) {
+  .auth-page--internal {
+    padding: 56px 20px;
+  }
+
+  .auth-page--internal .internal-login-brand {
+    max-width: 540px;
+    margin-bottom: 15px;
+  }
+}
+
+.auth-page--internal .internal-login-logo {
+  width: 155px;
+  height: auto;
+  object-fit: contain;
+
+  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.2));
+}
+
+.auth-page.auth-page--internal {
+  background:
+    /* iluminación violeta superior izquierda */
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(139, 92, 246, 0.14),
+      transparent 32%
+    ),
+    /* iluminación rosada muy sutil */
+    radial-gradient(
+        circle at 85% 85%,
+        rgba(236, 72, 153, 0.08),
+        transparent 30%
+      ),
+    /* base oscura */
+    linear-gradient(135deg, #100b1d 0%, #171026 38%, #1d1233 68%, #24143d 100%) !important;
+
+  background-size: 140% 140% !important;
+
+  animation: internal-background 12s ease infinite;
+}

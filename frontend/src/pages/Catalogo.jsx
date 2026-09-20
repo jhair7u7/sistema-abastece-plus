@@ -31,10 +31,7 @@ export default function Catalogo() {
     active === "Todos"
       ? products
       : products.filter((product) => product.categoria === active);
-  const units = Object.values(cart).reduce(
-    (total, quantity) => total + quantity,
-    0,
-  );
+  const units = cart.reduce((total, item) => total + item.cantidad, 0);
 
   return (
     <section className="catalog-page">
@@ -88,18 +85,21 @@ export default function Catalogo() {
                   style={{ "--product-delay": `${index * 90}ms` }}
                   key={product.producto_id}
                 >
+                  {Number(product.stock_disponible) <= 0 && <span className="sold-out-ribbon">AGOTADO</span>}
                   <button className="favorite" aria-label="Guardar favorito">
                     <Heart size={20} />
                   </button>
                   <div className="product-image">
                     <img
-                      src={productImages[product.producto_id] || "/logo.png"}
+                      src={
+                        product.imagen_url ||
+                        productImages[product.producto_id] ||
+                        "/logo.png"
+                      }
                       alt={product.nombre}
                     />
                   </div>
-                  <small className="product-brand">
-                    {product.marca} · {product.codigo_sku}
-                  </small>
+                  <small className="product-brand">{product.marca}</small>
                   <h3>{product.nombre}</h3>
                   <span className="stock">
                     {Number(product.stock_disponible) > 0
@@ -107,7 +107,7 @@ export default function Catalogo() {
                       : "Sin stock"}
                   </span>
                   <div className="price-box">
-                    <p>Precio desde</p>
+                    <p>Precio</p>
                     <strong>
                       S/{" "}
                       {Number(
@@ -137,15 +137,16 @@ export default function Catalogo() {
                         }
                       </span>
 
-                      <button onClick={() => addProduct(product)}>+</button>
+                      <button disabled={cart.find((item)=>item.producto_id===product.producto_id)?.cantidad >= Number(product.stock_disponible)} onClick={() => addProduct(product)}>+</button>
                     </div>
                   ) : (
                     <button
                       className="cart-button"
+                      disabled={Number(product.stock_disponible) <= 0}
                       onClick={() => addProduct(product)}
                     >
                       <ShoppingCart size={18} />
-                      Añadir al carrito
+                      {Number(product.stock_disponible) <= 0 ? "Producto agotado" : "Añadir al carrito"}
                     </button>
                   )}
                 </article>

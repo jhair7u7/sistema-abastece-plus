@@ -15,7 +15,6 @@ class ProveedorController
     public function registrar($datos)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -86,7 +85,6 @@ class ProveedorController
     public function listar()
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -103,7 +101,6 @@ class ProveedorController
     public function buscar($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -134,7 +131,6 @@ class ProveedorController
     public function actualizar($id, $datos)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
             "LOGISTICA"
         ]);
 
@@ -228,7 +224,7 @@ class ProveedorController
     public function desactivar($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR"
+            "LOGISTICA"
         ]);
 
         if (!$id || !is_numeric($id)) {
