@@ -15,37 +15,6 @@ class CategoriaController
         $this->categoria = new Categoria($db);
     }
 
-    // -- VERIFICAR ACCESO PARA CONSULTAR CATEGORÍAS | ADMINISTRADOR / LOGISTICA / BODEGUERO
-    private function verificarAccesoConsulta()
-    {
-        $payload = AuthMiddleware::verificarToken();
-
-        // BODEGUERO
-        if (
-            isset($payload["rol"]) &&
-            $payload["rol"] === "BODEGUERO"
-        ) {
-            return $payload;
-        }
-
-        // USUARIOS INTERNOS
-        if (
-            isset($payload["rol"]) &&
-            in_array($payload["rol"], [
-                "LOGISTICA",
-                "ADMINISTRADOR"
-            ])
-        ) {
-            return $payload;
-        }
-
-        Response::json([
-            "mensaje" => "No tiene permisos para consultar categorías"
-        ], 403);
-
-        exit;
-    }
-
     // -- REGISTRAR CATEGORÍA | ADMINISTRADOR / LOGISTICA
     public function registrar()
     {
@@ -108,10 +77,14 @@ class CategoriaController
         }
     }
 
-    // -- LISTAR CATEGORÍAS | ADMINISTRADOR / LOGISTICA / BODEGUERO
+    // -- LISTAR CATEGORÍAS | ADMINISTRADOR / LOGISTICA
     public function listar()
     {
-        $this->verificarAccesoConsulta();
+        AuthMiddleware::verificarToken();
+        AuthMiddleware::permitirRoles([
+            "LOGISTICA",
+            "ADMINISTRADOR"
+        ]);
 
         $categorias = $this->categoria->listar();
 
@@ -121,10 +94,14 @@ class CategoriaController
         ]);
     }
 
-    // -- BUSCAR CATEGORÍA POR ID | ADMINISTRADOR / LOGISTICA / BODEGUERO
+    // -- BUSCAR CATEGORÍA POR ID | ADMINISTRADOR / LOGISTICA
     public function buscar($id)
     {
-        $this->verificarAccesoConsulta();
+        AuthMiddleware::verificarToken();
+        AuthMiddleware::permitirRoles([
+            "LOGISTICA",
+            "ADMINISTRADOR"
+        ]);
 
         $categoria = $this->categoria->buscarPorId($id);
 
@@ -142,10 +119,14 @@ class CategoriaController
         ]);
     }
 
-    // -- BUSCAR CATEGORÍA POR NOMBRE | ADMINISTRADOR / LOGISTICA / BODEGUERO
+    // -- BUSCAR CATEGORÍA POR NOMBRE | ADMINISTRADOR / LOGISTICA
     public function buscarPorNombre()
     {
-        $this->verificarAccesoConsulta();
+        AuthMiddleware::verificarToken();
+        AuthMiddleware::permitirRoles([
+            "LOGISTICA",
+            "ADMINISTRADOR"
+        ]);
 
         $nombre = isset($_GET["nombre"])
             ? trim($_GET["nombre"])
