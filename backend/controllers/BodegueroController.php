@@ -1,7 +1,8 @@
 <?php
 
-require_once "../models/Bodeguero.php";
-require_once "../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../models/Bodeguero.php";
+require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../utils/Response.php";
 
 class BodegueroController
 {
@@ -65,7 +66,7 @@ class BodegueroController
             "BODEGA",
             "MINIMARKET",
             "MARKET_LOCAL",
-            "OTROS"
+            "OTRO"
         ];
 
         if (!in_array($tipoEstablecimiento, $tiposPermitidos)) {
@@ -75,7 +76,7 @@ class BodegueroController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $resultado = $this->bodeguero->registrar(
             $nombre,
@@ -139,9 +140,9 @@ class BodegueroController
             return;
         }
 
-        $passwordHash = hash("sha256", $password);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        if (!hash_equals($bodeguero["password_hash"], $passwordHash)) {
+        if (!password_verify($password, $bodeguero["password_hash"])) {
             Response::json([
                 "mensaje" => "Usuario o contraseña incorrectos"
             ], 401);
@@ -182,8 +183,8 @@ class BodegueroController
     public function listar()
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "GESTOR_ATENCION"
+            "GESTOR_ATENCION",
+            "ADMINISTRADOR"
         ]);
 
         $bodegueros = $this->bodeguero->listar();
@@ -199,8 +200,8 @@ class BodegueroController
     public function buscar($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "GESTOR_ATENCION"
+            "GESTOR_ATENCION",
+            "ADMINISTRADOR"
         ]);
 
         if (!$id || !is_numeric($id)) {
@@ -230,6 +231,7 @@ class BodegueroController
     public function actualizar($id, $datos)
     {
         AuthMiddleware::permitirRoles([
+            "GESTOR_ATENCION",
             "ADMINISTRADOR"
         ]);
 
@@ -302,7 +304,7 @@ class BodegueroController
             "BODEGA",
             "MINIMARKET",
             "MARKET_LOCAL",
-            "OTROS"
+            "OTRO"
         ];
 
         if (!in_array($tipoEstablecimiento, $tiposPermitidos)) {
@@ -341,6 +343,7 @@ class BodegueroController
     public function bloquear($id)
     {
         AuthMiddleware::permitirRoles([
+            "GESTOR_ATENCION",
             "ADMINISTRADOR"
         ]);
 

@@ -1,8 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../utils/Response.php';
+
 class AuthMiddleware
 {
-    private static $secret = "ABASTECEPLUS_SECRET_2026";
+    private static function secret()
+    {
+        return getenv("AUTH_SECRET") ?: "ABASTECEPLUS_SECRET_2026";
+    }
 
     // Crear token
     public static function crearToken($usuario)
@@ -21,7 +26,7 @@ class AuthMiddleware
         $firma = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         return $payloadBase64 . "." . $firma;
@@ -30,16 +35,14 @@ class AuthMiddleware
     // Validar token
     public static function verificarToken()
     {
-        $headers = getallheaders();
+        $authorization = self::obtenerAuthorization();
 
-        if (!isset($headers["Authorization"])) {
+        if ($authorization === null || $authorization === "") {
             Response::json([
                 "mensaje" => "Token de acceso requerido"
             ], 401);
             exit;
         }
-
-        $authorization = $headers["Authorization"];
 
         if (strpos($authorization, "Bearer ") !== 0) {
             Response::json([
@@ -65,7 +68,7 @@ class AuthMiddleware
         $firmaEsperada = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         if (!hash_equals($firmaEsperada, $firmaRecibida)) {
@@ -94,6 +97,14 @@ class AuthMiddleware
             exit;
         }
 
+        global $conexion;
+        $interno = ($payload["rol"] ?? "") !== "BODEGUERO";
+        $sql = $interno ? "SELECT rol FROM usuarios_internos WHERE usuario_interno_id=? AND activo=1" : "SELECT 'BODEGUERO' FROM bodegueros WHERE bodeguero_id=? AND estado_cuenta<>'BLOQUEADO'";
+        $stmt = $conexion->prepare($sql);
+        $stmt->execute([$payload["id"] ?? 0]);
+        if ($stmt->fetchColumn() !== ($payload["rol"] ?? null)) {
+            Response::json(["mensaje" => "La sesión ya no está autorizada"], 401); exit;
+        }
         return $payload;
     }
     // CREAR TOKEN PARA BODEGUERO
@@ -113,7 +124,7 @@ class AuthMiddleware
         $firma = hash_hmac(
             "sha256",
             $payloadBase64,
-            self::$secret
+            self::secret()
         );
 
         return $payloadBase64 . "." . $firma;
@@ -124,7 +135,7 @@ class AuthMiddleware
     {
         $usuario = self::verificarToken();
 
-        if (!in_array($usuario["rol"], $rolesPermitidos)) {
+        if (!isset($usuario["rol"]) || !in_array($usuario["rol"], $rolesPermitidos, true)) {
             Response::json([
                 "mensaje" => "No tienes permisos para realizar esta acción"
             ], 403);
@@ -132,6 +143,27 @@ class AuthMiddleware
         }
 
         return $usuario;
+    }
+
+    // PHP y los distintos servidores web no conservan siempre la misma
+    // capitalización ni exponen Authorization en el mismo lugar.
+    private static function obtenerAuthorization()
+    {
+        if (function_exists("getallheaders")) {
+            foreach (getallheaders() as $nombre => $valor) {
+                if (strcasecmp($nombre, "Authorization") === 0) {
+                    return trim($valor);
+                }
+            }
+        }
+
+        foreach (["HTTP_AUTHORIZATION", "REDIRECT_HTTP_AUTHORIZATION"] as $clave) {
+            if (!empty($_SERVER[$clave])) {
+                return trim($_SERVER[$clave]);
+            }
+        }
+
+        return null;
     }
 
     private static function base64UrlEncode($data)

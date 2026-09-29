@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/../models/Categoria.php";
 require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../utils/Response.php";
 
 class CategoriaController
 {
@@ -14,21 +15,59 @@ class CategoriaController
         $this->categoria = new Categoria($db);
     }
 
-    // REGISTRAR CATEGORÍA
+    // -- VERIFICAR ACCESO PARA CONSULTAR CATEGORÍAS | ADMINISTRADOR / LOGISTICA / BODEGUERO
+    private function verificarAccesoConsulta()
+    {
+        $payload = AuthMiddleware::verificarToken();
+
+        // BODEGUERO
+        if (
+            isset($payload["rol"]) &&
+            $payload["rol"] === "BODEGUERO"
+        ) {
+            return $payload;
+        }
+
+        // USUARIOS INTERNOS
+        if (
+            isset($payload["rol"]) &&
+            in_array($payload["rol"], [
+                "LOGISTICA",
+                "ADMINISTRADOR"
+            ])
+        ) {
+            return $payload;
+        }
+
+        Response::json([
+            "mensaje" => "No tiene permisos para consultar categorías"
+        ], 403);
+
+        exit;
+    }
+
+    // -- REGISTRAR CATEGORÍA | ADMINISTRADOR / LOGISTICA
     public function registrar()
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
-        $datos = json_decode(file_get_contents("php://input"), true);
+        $datos = json_decode(
+            file_get_contents("php://input"),
+            true
+        );
 
-        if (!isset($datos["nombre"]) || trim($datos["nombre"]) === "") {
+        if (
+            !isset($datos["nombre"]) ||
+            trim($datos["nombre"]) === ""
+        ) {
             Response::json([
                 "mensaje" => "El nombre de la categoría es obligatorio"
             ], 400);
+
             return;
         }
 
@@ -41,41 +80,38 @@ class CategoriaController
             Response::json([
                 "mensaje" => "La categoría ya existe"
             ], 409);
+
             return;
         }
 
         try {
 
-            if ($this->categoria->registrar($nombre)) {
+            $resultado = $this->categoria->registrar($nombre);
 
+            if ($resultado) {
                 Response::json([
                     "mensaje" => "Categoría registrada correctamente"
                 ], 201);
 
-            } else {
-
-                Response::json([
-                    "mensaje" => "No se pudo registrar la categoría"
-                ], 500);
+                return;
             }
+
+            Response::json([
+                "mensaje" => "No se pudo registrar la categoría"
+            ], 500);
 
         } catch (PDOException $e) {
 
             Response::json([
-                "mensaje" => "Error al registrar la categoría",
-                "error" => $e->getMessage()
+                "mensaje" => "Error al registrar la categoría"
             ], 500);
         }
     }
 
-    // LISTAR CATEGORÍAS
+    // -- LISTAR CATEGORÍAS | ADMINISTRADOR / LOGISTICA / BODEGUERO
     public function listar()
     {
-        AuthMiddleware::verificarToken();
-        AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
-        ]);
+        $this->verificarAccesoConsulta();
 
         $categorias = $this->categoria->listar();
 
@@ -85,14 +121,10 @@ class CategoriaController
         ]);
     }
 
-    // BUSCAR POR ID
+    // -- BUSCAR CATEGORÍA POR ID | ADMINISTRADOR / LOGISTICA / BODEGUERO
     public function buscar($id)
     {
-        AuthMiddleware::verificarToken();
-        AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
-        ]);
+        $this->verificarAccesoConsulta();
 
         $categoria = $this->categoria->buscarPorId($id);
 
@@ -100,6 +132,7 @@ class CategoriaController
             Response::json([
                 "mensaje" => "Categoría no encontrada"
             ], 404);
+
             return;
         }
 
@@ -109,23 +142,22 @@ class CategoriaController
         ]);
     }
 
-    // BUSCAR POR NOMBRE
+    // -- BUSCAR CATEGORÍA POR NOMBRE | ADMINISTRADOR / LOGISTICA / BODEGUERO
     public function buscarPorNombre()
     {
-        AuthMiddleware::verificarToken();
-        AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
-        ]);
+        $this->verificarAccesoConsulta();
 
-        if (!isset($_GET["nombre"]) || trim($_GET["nombre"]) === "") {
+        $nombre = isset($_GET["nombre"])
+            ? trim($_GET["nombre"])
+            : "";
+
+        if ($nombre === "") {
             Response::json([
                 "mensaje" => "Debe indicar el nombre de la categoría"
             ], 400);
+
             return;
         }
-
-        $nombre = trim($_GET["nombre"]);
 
         $categoria = $this->categoria->buscarPorNombre($nombre);
 
@@ -133,6 +165,7 @@ class CategoriaController
             Response::json([
                 "mensaje" => "Categoría no encontrada"
             ], 404);
+
             return;
         }
 
@@ -142,79 +175,12 @@ class CategoriaController
         ]);
     }
 
-    // ACTUALIZAR CATEGORÍA
+    // -- ACTUALIZAR CATEGORÍA | ADMINISTRADOR / LOGISTICA
     public function actualizar($id)
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
-        ]);
-
-        $categoria = $this->categoria->buscarPorId($id);
-
-        if (!$categoria) {
-            Response::json([
-                "mensaje" => "Categoría no encontrada"
-            ], 404);
-            return;
-        }
-
-        $datos = json_decode(file_get_contents("php://input"), true);
-
-        if (!isset($datos["nombre"]) || trim($datos["nombre"]) === "") {
-            Response::json([
-                "mensaje" => "El nombre de la categoría es obligatorio"
-            ], 400);
-            return;
-        }
-
-        $nombre = trim($datos["nombre"]);
-
-        // Mantener activo actual si no se envía
-        $activo = isset($datos["activo"])
-            ? (bool)$datos["activo"]
-            : (bool)$categoria["activo"];
-
-        // Verificar que el nuevo nombre no pertenezca a otra categoría
-        $existente = $this->categoria->buscarPorNombre($nombre);
-
-        if ($existente && $existente["categoria_id"] != $id) {
-            Response::json([
-                "mensaje" => "Ya existe otra categoría con ese nombre"
-            ], 409);
-            return;
-        }
-
-        try {
-
-            if ($this->categoria->actualizar($id, $nombre, $activo)) {
-
-                Response::json([
-                    "mensaje" => "Categoría actualizada correctamente"
-                ]);
-
-            } else {
-
-                Response::json([
-                    "mensaje" => "No se pudo actualizar la categoría"
-                ], 500);
-            }
-
-        } catch (PDOException $e) {
-
-            Response::json([
-                "mensaje" => "Error al actualizar la categoría",
-                "error" => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // ELIMINAR CATEGORÍA (BAJA LÓGICA)
-    public function eliminar($id)
-    {
-        AuthMiddleware::verificarToken();
-        AuthMiddleware::permitirRoles([
+            "LOGISTICA",
             "ADMINISTRADOR"
         ]);
 
@@ -224,47 +190,82 @@ class CategoriaController
             Response::json([
                 "mensaje" => "Categoría no encontrada"
             ], 404);
+
             return;
         }
 
-        if ((int)$categoria["activo"] === 0) {
+        $datos = json_decode(
+            file_get_contents("php://input"),
+            true
+        );
+
+        if (
+            !isset($datos["nombre"]) ||
+            trim($datos["nombre"]) === ""
+        ) {
             Response::json([
-                "mensaje" => "La categoría ya está desactivada"
+                "mensaje" => "El nombre de la categoría es obligatorio"
+            ], 400);
+
+            return;
+        }
+
+        $nombre = trim($datos["nombre"]);
+
+        // Mantener estado actual si no se envía
+        $activo = isset($datos["activo"])
+            ? (bool)$datos["activo"]
+            : (bool)$categoria["activo"];
+
+        // Verificar duplicado
+        $existente = $this->categoria->buscarPorNombre($nombre);
+
+        if (
+            $existente &&
+            $existente["categoria_id"] != $id
+        ) {
+            Response::json([
+                "mensaje" => "Ya existe otra categoría con ese nombre"
             ], 409);
+
             return;
         }
 
         try {
 
-            if ($this->categoria->eliminar($id)) {
+            $resultado = $this->categoria->actualizar(
+                $id,
+                $nombre,
+                $activo
+            );
 
+            if ($resultado) {
                 Response::json([
-                    "mensaje" => "Categoría desactivada correctamente"
+                    "mensaje" => "Categoría actualizada correctamente"
                 ]);
 
-            } else {
-
-                Response::json([
-                    "mensaje" => "No se pudo desactivar la categoría"
-                ], 500);
+                return;
             }
+
+            Response::json([
+                "mensaje" => "No se pudo actualizar la categoría"
+            ], 500);
 
         } catch (PDOException $e) {
 
             Response::json([
-                "mensaje" => "Error al desactivar la categoría",
-                "error" => $e->getMessage()
+                "mensaje" => "Error al actualizar la categoría"
             ], 500);
         }
     }
 
-    // ACTIVAR / DESACTIVAR
+    // -- CAMBIAR ESTADO | ADMINISTRADOR / LOGISTICA
     public function cambiarEstado($id)
     {
         AuthMiddleware::verificarToken();
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
         $categoria = $this->categoria->buscarPorId($id);
@@ -273,33 +274,85 @@ class CategoriaController
             Response::json([
                 "mensaje" => "Categoría no encontrada"
             ], 404);
+
             return;
         }
 
-        $datos = json_decode(file_get_contents("php://input"), true);
+        $datos = json_decode(
+            file_get_contents("php://input"),
+            true
+        );
 
         if (!isset($datos["activo"])) {
             Response::json([
                 "mensaje" => "Debe indicar el estado activo"
             ], 400);
+
             return;
         }
 
         $activo = (bool)$datos["activo"];
 
-        if ($this->categoria->cambiarEstado($id, $activo)) {
+        $resultado = $this->categoria->cambiarEstado(
+            $id,
+            $activo
+        );
 
+        if ($resultado) {
             Response::json([
                 "mensaje" => $activo
                     ? "Categoría activada correctamente"
                     : "Categoría desactivada correctamente"
             ]);
 
-        } else {
-
-            Response::json([
-                "mensaje" => "No se pudo cambiar el estado"
-            ], 500);
+            return;
         }
+
+        Response::json([
+            "mensaje" => "No se pudo cambiar el estado de la categoría"
+        ], 500);
+    }
+
+    // -- ELIMINAR CATEGORÍA | SOLO ADMINISTRADOR
+    public function eliminar($id)
+    {
+        AuthMiddleware::verificarToken();
+        AuthMiddleware::permitirRoles([
+            "LOGISTICA",
+            "ADMINISTRADOR"
+        ]);
+
+        $categoria = $this->categoria->buscarPorId($id);
+
+        if (!$categoria) {
+            Response::json([
+                "mensaje" => "Categoría no encontrada"
+            ], 404);
+
+            return;
+        }
+
+        // No eliminar si tiene productos asociados
+        if ($this->categoria->tieneProductos($id)) {
+            Response::json([
+                "mensaje" => "No se puede eliminar la categoría porque tiene productos asociados"
+            ], 409);
+
+            return;
+        }
+
+        $resultado = $this->categoria->eliminar($id);
+
+        if ($resultado) {
+            Response::json([
+                "mensaje" => "Categoría eliminada correctamente"
+            ]);
+
+            return;
+        }
+
+        Response::json([
+            "mensaje" => "No se pudo eliminar la categoría"
+        ], 500);
     }
 }

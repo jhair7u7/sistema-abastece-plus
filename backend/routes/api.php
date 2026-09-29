@@ -1,12 +1,13 @@
 <?php
 
-require_once "../controllers/AuthController.php";
-require_once "../controllers/UsuarioController.php";
-require_once "../controllers/BodegueroController.php";
-require_once "../middleware/AuthMiddleware.php";
-require_once "../controllers/ProveedorController.php";
-require_once "../controllers/CategoriaController.php";
-require_once "../controllers/ProductoController.php";
+require_once __DIR__ . "/../controllers/AuthController.php";
+require_once __DIR__ . "/../controllers/UsuarioController.php";
+require_once __DIR__ . "/../controllers/BodegueroController.php";
+require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../controllers/ProveedorController.php";
+require_once __DIR__ . "/../controllers/CategoriaController.php";
+require_once __DIR__ . "/../controllers/ProductoController.php";
+require_once __DIR__ . "/../controllers/DireccionController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -17,6 +18,18 @@ $usuarioController = new UsuarioController($conexion);
 $bodegueroController = new BodegueroController($conexion);
 
 $accion = isset($_GET["accion"]) ? $_GET["accion"] : "";
+require_once __DIR__ . '/../controllers/OperacionController.php';
+if (OperacionController::ejecutar($conexion, $accion, $metodo, $datos ?? [])) exit;
+if ($metodo === 'GET' && $accion === 'productos_internos') {
+    AuthMiddleware::permitirRoles(['LOGISTICA']);
+    $productos = new Producto($conexion);
+    Response::json(['productos' => $productos->listar()]); exit;
+}
+// Catálogo público sin códigos internos ni datos de proveedores.
+if ($metodo === 'GET' && $accion === 'listar_productos') {
+    Response::json(['productos' => $conexion->query('SELECT *, precio_unitario AS precio, precio_unitario AS precio_base_sugerido, stock_total AS stock_disponible, imagen_principal AS imagen_url FROM vista_catalogo_disponible')->fetchAll()]); exit;
+}
+
 
 
 // -- LOGIN USUARIO INTERNO (DEDICADO)
@@ -275,13 +288,6 @@ if ($accion === "cambiar_estado_categoria" && $_SERVER["REQUEST_METHOD"] === "PU
     exit;
 }
 
-if ($accion === "listar_productos" && $_SERVER["REQUEST_METHOD"] === "GET") {
-
-    $controller = new ProductoController($conexion);
-    $controller->listar();
-
-    exit;
-}
 
 
 if ($accion === "buscar_producto" && $_SERVER["REQUEST_METHOD"] === "GET") {
@@ -300,11 +306,31 @@ if ($accion === "buscar_producto" && $_SERVER["REQUEST_METHOD"] === "GET") {
 }
 
 
+if ($accion === "buscar_producto_nombre" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new ProductoController($conexion);
+    $controller->buscarPorNombre();
+
+    exit;
+}
+
+
 if ($accion === "registrar_producto" && $_SERVER["REQUEST_METHOD"] === "POST") {
 
     $controller = new ProductoController($conexion);
     $controller->registrar();
 
+    exit;
+}
+
+if ($accion === "subir_imagen_producto" && $_SERVER["REQUEST_METHOD"] === "POST") {
+    $id = $_GET["id"] ?? null;
+    if (!$id || !is_numeric($id)) {
+        Response::json(["mensaje" => "Debe indicar el ID del producto"], 400);
+        exit;
+    }
+    $controller = new ProductoController($conexion);
+    $controller->subirImagen($id);
     exit;
 }
 
@@ -335,6 +361,78 @@ if ($accion === "eliminar_producto" && $_SERVER["REQUEST_METHOD"] === "DELETE") 
     }
 
     $controller = new ProductoController($conexion);
+    $controller->eliminar($_GET["id"]);
+
+    exit;
+}
+
+// -- DIRECCIONES
+
+// LISTAR DIRECCIONES
+if ($accion === "listar_direcciones" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    $controller = new DireccionController($conexion);
+    $controller->listar();
+
+    exit;
+}
+
+
+// BUSCAR DIRECCIÓN POR ID
+if ($accion === "buscar_direccion" && $_SERVER["REQUEST_METHOD"] === "GET") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->obtener($_GET["id"]);
+
+    exit;
+}
+
+
+// REGISTRAR DIRECCIÓN
+if ($accion === "registrar_direccion" && $_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $controller = new DireccionController($conexion);
+    $controller->crear();
+
+    exit;
+}
+
+
+// ACTUALIZAR DIRECCIÓN
+if ($accion === "actualizar_direccion" && $_SERVER["REQUEST_METHOD"] === "PUT") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
+    $controller->actualizar($_GET["id"]);
+
+    exit;
+}
+
+
+// ELIMINAR DIRECCIÓN
+if ($accion === "eliminar_direccion" && $_SERVER["REQUEST_METHOD"] === "DELETE") {
+
+    if (!isset($_GET["id"])) {
+        Response::json([
+            "mensaje" => "Debe indicar el ID de la dirección"
+        ], 400);
+        exit;
+    }
+
+    $controller = new DireccionController($conexion);
     $controller->eliminar($_GET["id"]);
 
     exit;

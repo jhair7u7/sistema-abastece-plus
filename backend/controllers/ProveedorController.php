@@ -1,12 +1,15 @@
 <?php
 
+require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../utils/Response.php";
+
 class ProveedorController
 {
     private $proveedor;
 
     public function __construct($conexion)
     {
-        require_once "../models/Proveedor.php";
+        require_once __DIR__ . "/../models/Proveedor.php";
         $this->proveedor = new Proveedor($conexion);
     }
 
@@ -15,8 +18,8 @@ class ProveedorController
     public function registrar($datos)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
         if (
@@ -86,8 +89,8 @@ class ProveedorController
     public function listar()
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
         $proveedores = $this->proveedor->listar();
@@ -103,8 +106,8 @@ class ProveedorController
     public function buscar($id)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
         if (!$id || !is_numeric($id)) {
@@ -134,8 +137,8 @@ class ProveedorController
     public function actualizar($id, $datos)
     {
         AuthMiddleware::permitirRoles([
-            "ADMINISTRADOR",
-            "LOGISTICA"
+            "LOGISTICA",
+            "ADMINISTRADOR"
         ]);
 
         if (!$id || !is_numeric($id)) {
@@ -228,6 +231,7 @@ class ProveedorController
     public function desactivar($id)
     {
         AuthMiddleware::permitirRoles([
+            "LOGISTICA",
             "ADMINISTRADOR"
         ]);
 

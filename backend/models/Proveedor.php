@@ -21,7 +21,7 @@ class Proveedor
                     contacto_nombre,
                     correo,
                     telefono,
-                    reputacion_srm,
+                    puntaje,
                     tiempo_promedio_entrega_hrs,
                     activo,
                     creado_en
@@ -48,7 +48,7 @@ class Proveedor
                     contacto_nombre,
                     correo,
                     telefono,
-                    reputacion_srm,
+                    puntaje,
                     tiempo_promedio_entrega_hrs,
                     activo,
                     creado_en
@@ -75,7 +75,7 @@ class Proveedor
                     contacto_nombre,
                     correo,
                     telefono,
-                    reputacion_srm,
+                    puntaje,
                     tiempo_promedio_entrega_hrs,
                     activo,
                     creado_en
@@ -100,7 +100,7 @@ class Proveedor
                     contacto_nombre,
                     correo,
                     telefono,
-                    reputacion_srm,
+                    puntaje,
                     tiempo_promedio_entrega_hrs,
                     activo,
                     creado_en

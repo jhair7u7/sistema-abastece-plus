@@ -10,23 +10,26 @@ class Producto
         $this->conn = $db;
     }
 
-    public function listar()
+    public function listar($soloActivos = false)
     {
+        $filtroActivo = $soloActivos ? "WHERE p.activo = TRUE" : "";
+
         $sql = "SELECT 
                     p.producto_id,
                     p.categoria_id,
                     c.nombre AS categoria_nombre,
-                    p.codigo_sku,
+                    p.codigo_interno AS codigo_sku,
                     p.nombre,
                     p.descripcion,
-                    p.imagen_url,
+                    (SELECT ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id AND es_principal=1 LIMIT 1) AS imagen_url,
                     p.marca,
                     p.unidad_medida,
                     p.peso_kg,
-                    p.precio_base_sugerido,
+                    p.precio_unitario AS precio_base_sugerido,
                     p.activo
                 FROM {$this->table} p
                 LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+                {$filtroActivo}
                 ORDER BY p.producto_id ASC";
 
         $stmt = $this->conn->prepare($sql);
@@ -41,14 +44,14 @@ class Producto
                     p.producto_id,
                     p.categoria_id,
                     c.nombre AS categoria_nombre,
-                    p.codigo_sku,
+                    p.codigo_interno AS codigo_sku,
                     p.nombre,
                     p.descripcion,
-                    p.imagen_url,
+                    (SELECT ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id AND es_principal=1 LIMIT 1) AS imagen_url,
                     p.marca,
                     p.unidad_medida,
                     p.peso_kg,
-                    p.precio_base_sugerido,
+                    p.precio_unitario AS precio_base_sugerido,
                     p.activo
                 FROM {$this->table} p
                 LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
@@ -61,13 +64,43 @@ class Producto
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarPorNombre($nombre, $soloActivos = false)
+    {
+        $filtroActivo = $soloActivos ? "AND p.activo = TRUE" : "";
+
+        $sql = "SELECT 
+                    p.producto_id,
+                    p.categoria_id,
+                    c.nombre AS categoria_nombre,
+                    p.codigo_interno AS codigo_sku,
+                    p.nombre,
+                    p.descripcion,
+                    (SELECT ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id AND es_principal=1 LIMIT 1) AS imagen_url,
+                    p.marca,
+                    p.unidad_medida,
+                    p.peso_kg,
+                    p.precio_unitario AS precio_base_sugerido,
+                    p.activo
+                FROM {$this->table} p
+                LEFT JOIN categorias c ON p.categoria_id = c.categoria_id
+                WHERE p.nombre LIKE :nombre {$filtroActivo}
+                ORDER BY p.nombre ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $nombreBusqueda = "%" . $nombre . "%";
+        $stmt->bindParam(":nombre", $nombreBusqueda);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function buscarPorSku($sku)
     {
         $sql = "SELECT 
                     producto_id,
-                    codigo_sku
+                    codigo_interno AS codigo_sku
                 FROM {$this->table}
-                WHERE codigo_sku = :sku";
+                WHERE codigo_interno = :sku";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(":sku", $sku);
@@ -79,9 +112,9 @@ class Producto
     public function registrar($datos)
     {
         $sql = "INSERT INTO {$this->table} 
-                    (categoria_id, codigo_sku, nombre, descripcion, imagen_url, marca, unidad_medida, peso_kg, precio_base_sugerido, activo)
+                    (categoria_id, codigo_interno, nombre, descripcion, marca, unidad_medida, peso_kg, precio_unitario, activo)
                 VALUES 
-                    (:categoria_id, :codigo_sku, :nombre, :descripcion, :imagen_url, :marca, :unidad_medida, :peso_kg, :precio_base_sugerido, TRUE)";
+                    (:categoria_id, :codigo_sku, :nombre, :descripcion, :marca, :unidad_medida, :peso_kg, :precio_base_sugerido, TRUE)";
 
         $stmt = $this->conn->prepare($sql);
 
@@ -89,27 +122,25 @@ class Producto
         $stmt->bindParam(":codigo_sku", $datos["codigo_sku"]);
         $stmt->bindParam(":nombre", $datos["nombre"]);
         $stmt->bindParam(":descripcion", $datos["descripcion"]);
-        $stmt->bindParam(":imagen_url", $datos["imagen_url"]);
         $stmt->bindParam(":marca", $datos["marca"]);
         $stmt->bindParam(":unidad_medida", $datos["unidad_medida"]);
         $stmt->bindParam(":peso_kg", $datos["peso_kg"]);
         $stmt->bindParam(":precio_base_sugerido", $datos["precio_base_sugerido"]);
 
-        return $stmt->execute();
+        return $this->guardarConImagen($stmt, null, $datos);
     }
 
     public function actualizar($id, $datos)
     {
         $sql = "UPDATE {$this->table}
                 SET categoria_id = :categoria_id,
-                    codigo_sku = :codigo_sku,
+                    codigo_interno = :codigo_sku,
                     nombre = :nombre,
                     descripcion = :descripcion,
-                    imagen_url = :imagen_url,
                     marca = :marca,
                     unidad_medida = :unidad_medida,
                     peso_kg = :peso_kg,
-                    precio_base_sugerido = :precio_base_sugerido
+                    precio_unitario = :precio_base_sugerido
                 WHERE producto_id = :id";
 
         $stmt = $this->conn->prepare($sql);
@@ -118,14 +149,50 @@ class Producto
         $stmt->bindParam(":codigo_sku", $datos["codigo_sku"]);
         $stmt->bindParam(":nombre", $datos["nombre"]);
         $stmt->bindParam(":descripcion", $datos["descripcion"]);
-        $stmt->bindParam(":imagen_url", $datos["imagen_url"]);
         $stmt->bindParam(":marca", $datos["marca"]);
         $stmt->bindParam(":unidad_medida", $datos["unidad_medida"]);
         $stmt->bindParam(":peso_kg", $datos["peso_kg"]);
         $stmt->bindParam(":precio_base_sugerido", $datos["precio_base_sugerido"]);
         $stmt->bindParam(":id", $id, PDO::PARAM_INT);
 
-        return $stmt->execute();
+        return $this->guardarConImagen($stmt, $id, $datos);
+    }
+
+    private function guardarConImagen($stmt, $id, $datos)
+    {
+        $this->conn->beginTransaction();
+        try {
+            $stmt->execute();
+            $id = $id ?? $this->conn->lastInsertId();
+            if (array_key_exists('imagen_url', $datos)) {
+                $q = $this->conn->prepare('DELETE FROM producto_imagenes WHERE producto_id=? AND es_principal=1');
+                $q->execute([$id]);
+                if (!empty($datos['imagen_url'])) {
+                    $q = $this->conn->prepare('INSERT INTO producto_imagenes (producto_id,ruta_imagen,es_principal) VALUES (?,?,1)');
+                    $q->execute([$id,$datos['imagen_url']]);
+                }
+            }
+            $this->conn->commit();
+            return (int)$id;
+        } catch (Throwable $e) {
+            $this->conn->rollBack(); throw $e;
+        }
+    }
+
+    public function guardarImagenPrincipal($id, $ruta, $subidoPor)
+    {
+        $this->conn->beginTransaction();
+        try {
+            $q = $this->conn->prepare('DELETE FROM producto_imagenes WHERE producto_id=? AND es_principal=1');
+            $q->execute([$id]);
+            $q = $this->conn->prepare('INSERT INTO producto_imagenes (producto_id,ruta_imagen,es_principal,subido_por) VALUES (?,?,1,?)');
+            $q->execute([$id, $ruta, $subidoPor]);
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
     }
 
     public function cambiarEstado($id, $activo)
@@ -142,4 +209,3 @@ class Producto
         return $stmt->execute();
     }
 }
-
