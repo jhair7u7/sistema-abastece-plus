@@ -8,6 +8,7 @@ require_once __DIR__ . "/../controllers/ProveedorController.php";
 require_once __DIR__ . "/../controllers/CategoriaController.php";
 require_once __DIR__ . "/../controllers/ProductoController.php";
 require_once __DIR__ . "/../controllers/DireccionController.php";
+require_once __DIR__ . "/../controllers/BotController.php";
 
 $metodo = $_SERVER["REQUEST_METHOD"];
 
@@ -27,7 +28,14 @@ if ($metodo === 'GET' && $accion === 'productos_internos') {
 }
 // Catálogo público sin códigos internos ni datos de proveedores.
 if ($metodo === 'GET' && $accion === 'listar_productos') {
-    Response::json(['productos' => $conexion->query('SELECT *, precio_unitario AS precio, precio_unitario AS precio_base_sugerido, stock_total AS stock_disponible, imagen_principal AS imagen_url FROM vista_catalogo_disponible')->fetchAll()]); exit;
+    Response::json(['productos' => $conexion->query('SELECT *, precio_unitario AS precio, precio_unitario AS precio_base_sugerido, stock_total AS stock_disponible, imagen_principal AS imagen_url FROM vista_catalogo_disponible WHERE stock_total > 0')->fetchAll()]); exit;
+}
+
+// -- ASISTENTE VIRTUAL IA (GEMINI)
+if ($metodo === 'POST' && $accion === 'bot_consultar') {
+    $botController = new BotController($conexion);
+    $botController->consultar($datos ?? []);
+    exit;
 }
 
 

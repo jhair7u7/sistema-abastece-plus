@@ -183,8 +183,7 @@ class BodegueroController
     public function listar()
     {
         AuthMiddleware::permitirRoles([
-            "GESTOR_ATENCION",
-            "ADMINISTRADOR"
+            "GESTOR_ATENCION"
         ]);
 
         $bodegueros = $this->bodeguero->listar();

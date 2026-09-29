@@ -40,3 +40,9 @@ Vite publica el sitio en `http://localhost:5173` y redirige `/api` a la API loca
 - bodeguero 1: `bodegueros1@example.test` / `rosa123`
 
 Los comerciantes nuevos se registran desde `/registro`. La base de ejemplo contiene comerciantes históricos con hashes bcrypt incompatibles con el backend SHA-256 actual; para probar el acceso de comerciante debe crearse una cuenta desde el formulario.
+
+## Asistente Virtual Inteligente (Bot IA)
+
+Se encuentra integrado el endpoint del asistente virtual con IA (Google Gemini) conectado en tiempo real a MySQL (`vista_catalogo_disponible` y pedidos):
+- **Endpoint**: `POST /?accion=bot_consultar`
+- **Documentación y ejemplos**: Consulta [`GUIA_BOT_FRONTEND.md`](./GUIA_BOT_FRONTEND.md) para ejemplos de consumo en React/JS y especificación completa del JSON.

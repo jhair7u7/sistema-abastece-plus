@@ -9,16 +9,16 @@ class OperacionController
     public static function ejecutar($db, $accion, $metodo, $datos)
     {
         $roles = [
-            'stock' => ['LOGISTICA', 'ADMINISTRADOR'], 'ajustar_stock' => ['LOGISTICA', 'ADMINISTRADOR'],
-            'despachos' => ['LOGISTICA', 'ADMINISTRADOR'], 'asignar_despacho' => ['LOGISTICA', 'ADMINISTRADOR'],
-            'facturas' => ['LOGISTICA', 'ADMINISTRADOR'], 'emitir_factura' => ['LOGISTICA', 'ADMINISTRADOR'],
-            'transportistas' => ['LOGISTICA', 'ADMINISTRADOR'],
-            'mis_rutas' => ['TRANSPORTISTA', 'ADMINISTRADOR'], 'actualizar_entrega' => ['TRANSPORTISTA', 'ADMINISTRADOR'],
-            'incidencias' => ['GESTOR_ATENCION', 'ADMINISTRADOR'], 'atender_incidencia' => ['GESTOR_ATENCION', 'ADMINISTRADOR'],
-            'conformidades' => ['GESTOR_ATENCION', 'ADMINISTRADOR'], 'revisar_conformidad' => ['GESTOR_ATENCION', 'ADMINISTRADOR'],
-            'mis_pedidos' => ['BODEGUERO', 'ADMINISTRADOR'], 'mis_facturas' => ['BODEGUERO', 'ADMINISTRADOR'],
-            'detalle_pedido' => ['BODEGUERO', 'ADMINISTRADOR'], 'tarjetas_prueba' => ['BODEGUERO', 'ADMINISTRADOR'],
-            'crear_compra' => ['BODEGUERO', 'ADMINISTRADOR'],
+            'stock' => ['LOGISTICA'], 'ajustar_stock' => ['LOGISTICA'],
+            'despachos' => ['LOGISTICA'], 'asignar_despacho' => ['LOGISTICA'],
+            'facturas' => ['LOGISTICA'], 'emitir_factura' => ['LOGISTICA'],
+            'transportistas' => ['LOGISTICA'],
+            'mis_rutas' => ['TRANSPORTISTA'], 'actualizar_entrega' => ['TRANSPORTISTA'],
+            'incidencias' => ['GESTOR_ATENCION'], 'atender_incidencia' => ['GESTOR_ATENCION'],
+            'conformidades' => ['GESTOR_ATENCION'], 'revisar_conformidad' => ['GESTOR_ATENCION'],
+            'mis_pedidos' => ['BODEGUERO'], 'mis_facturas' => ['BODEGUERO'],
+            'detalle_pedido' => ['BODEGUERO'], 'tarjetas_prueba' => ['BODEGUERO'],
+            'crear_compra' => ['BODEGUERO'],
         ];
         if (!isset($roles[$accion])) return false;
         $user = AuthMiddleware::permitirRoles($roles[$accion]);
