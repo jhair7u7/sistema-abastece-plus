@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../utils/Response.php';
 
+if (!class_exists('AuthMiddleware')) {
 class AuthMiddleware
 {
     private static function secret()
@@ -180,4 +181,5 @@ class AuthMiddleware
             strtr($data, "-_", "+/")
         );
     }
+}
 }

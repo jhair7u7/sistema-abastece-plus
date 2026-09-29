@@ -1,17 +1,17 @@
 # Abastece+
 
-Aplicación B2B para mayoristas y bodegas con frontend React/Vite y API PHP/MySQL.
+Aplicación B2B con frontend React/Vite y API PHP/MySQL.
 
 ## Requisitos
 
 - Node.js 20+
-- PHP 8.1+
-- MySQL 8.0+
+- PHP 8+
+- MySQL 8+
 
 ## Puesta en marcha
 
-1. Importa `bd/Abastece_nuevo.sql` en tu servidor MySQL.
-2. Si tus credenciales de MySQL difieren de las por defecto (`root` / `1234`), crea un archivo `.env` en la carpeta `backend/` basado en `backend/.env.example`.
+1. Importa `bd/Abastece+.sql` en MySQL.
+2. Configura las variables descritas en `backend/.env.example` en tu servidor o ajusta sus valores locales.
 3. Inicia la API desde la raíz del proyecto:
 
    ```powershell
@@ -26,27 +26,17 @@ Aplicación B2B para mayoristas y bodegas con frontend React/Vite y API PHP/MySQ
    npm run dev
    ```
 
-5. Abre en tu navegador `http://localhost:5173`. Vite redirige automáticamente las peticiones `/api` al backend PHP en `http://localhost:8000`.
+Vite publica el sitio en `http://localhost:5173` y redirige `/api` a la API local.
 
-## Accesos de Usuarios Internos (`@abastece.com`)
+## Accesos de prueba "usuarios internos" incluidos en la base
 
-| Rol | Correo | Contraseña |
-|-----|--------|------------|
-| **ADMINISTRADOR** | `carlos.ramirez@abastece.com` | `carlos123` |
-| **LOGISTICA** | `maria.torres@abastece.com` | `maria123` |
-| **TRANSPORTISTA** | `luis.mendoza@abastece.com` | `luis123` |
-| **GESTOR_ATENCION** | `andrea.flores@abastece.com` | `andrea123` |
+- Administrador: `administrador@abastece.com` / `admin123`
+- Transportista: `transporte1@abastece.com` / `transporte123`
+- Atención: `atencion.soporte@abastece.com` / `atencion123`
+- Logística: `logistica@abastece.com` / `logistica123`
 
-*(Hay 5 usuarios disponibles por cada rol en la base de datos).*
+## Accesos de prueba "bodeguero" incluido en la base
 
-## Accesos de Bodegueros / Clientes (`@gmail.com`)
+- bodeguero 1: `bodegueros1@example.test` / `rosa123`
 
-| Negocio | Correo | Contraseña |
-|---------|--------|------------|
-| Minimarket Don Jorge | `jorge.huaman@gmail.com` | `jorge123` |
-| Bodega Doña Rosa | `rosa.condori@gmail.com` | `rosa123` |
-| Market El Vecino | `miguel.paredes@gmail.com` | `miguel123` |
-| Comercial Doña Carmen | `carmen.rojas@gmail.com` | `carmen123` |
-| Bodega Patricia | `patricia.soto@gmail.com` | `patricia123` |
-
-*(Hay 14 bodegueros registrados en la base de datos, todos con contraseñas en formato `nombre123` y direcciones de entrega ya asignadas).*
+Los comerciantes nuevos se registran desde `/registro`. La base de ejemplo contiene comerciantes históricos con hashes bcrypt incompatibles con el backend SHA-256 actual; para probar el acceso de comerciante debe crearse una cuenta desde el formulario.
