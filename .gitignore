@@ -28,3 +28,6 @@ dist-ssr
 *.sw?
 
 backend/.env
+
+# Evidencias privadas de incidencias (respaldar fuera de Git)
+backend/storage/incidencias/

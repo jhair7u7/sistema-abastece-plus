@@ -1,0 +1,1 @@
+export const incidentTypes={PRODUCTO_DANADO:'Producto dañado',PEDIDO_INCOMPLETO:'Pedido incompleto',PRODUCTO_PROXIMO_VENCER:'Producto próximo a vencer',DEMORA_ENTREGA:'Demora en la entrega',OTRO:'Otro problema'};

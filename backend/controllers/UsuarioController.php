@@ -1,14 +1,17 @@
 <?php
 
 require_once __DIR__ . "/../models/Usuario.php";
+require_once __DIR__."/InternalUsersController.php";
 require_once __DIR__ . "/../middleware/AuthMiddleware.php";
 
 class UsuarioController
 {
     private $usuario;
+    private $conexion;
 
     public function __construct($conexion)
     {
+        $this->conexion=$conexion;
         $this->usuario = new Usuario($conexion);
     }
 
@@ -156,7 +159,8 @@ class UsuarioController
             return;
         }
 
-        $resultado = $this->usuario->eliminar($id);
+        try { InternalUsersController::apply($this->conexion,'admin_estado_usuario',['id'=>(int)$id,'activo'=>false],AuthMiddleware::verificarToken()['id']); $resultado=true; }
+        catch(InvalidArgumentException $e){Response::json(['mensaje'=>$e->getMessage()],422);return;}
 
         if ($resultado) {
             Response::json([

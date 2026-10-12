@@ -7,10 +7,12 @@ require_once __DIR__ . "/../middleware/AuthMiddleware.php";
 class AuthController
 {
     private $usuario;
+    private $conexion;
     private $bodeguero;
 
     public function __construct($conexion)
     {
+        $this->conexion = $conexion;
         $this->usuario = new Usuario($conexion);
         $this->bodeguero = new Bodeguero($conexion);
     }
@@ -45,6 +47,8 @@ class AuthController
             return;
         }
 
+        $stmt=$this->conexion->prepare('UPDATE usuarios_internos SET ultimo_acceso=NOW() WHERE usuario_interno_id=?');
+        $stmt->execute([$usuario['usuario_interno_id']]);
         $token = AuthMiddleware::crearToken($usuario);
         Response::json([
             "mensaje" => "Inicio de sesión exitoso",

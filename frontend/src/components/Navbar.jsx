@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LogIn, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -27,22 +27,23 @@ export default function Navbar() {
           {open ? <X /> : <Menu />}
         </button>
         <nav className={`menu ${open ? "menu-open" : ""}`}>
-          <Link to="/nosotros" onClick={close}>
+          <NavLink to="/" end onClick={close}>Inicio</NavLink>
+          <NavLink to="/nosotros" onClick={close}>
             Nosotros
-          </Link>
-          <Link to="/catalogo" onClick={close}>
+          </NavLink>
+          <NavLink to="/catalogo" onClick={close}>
             Catálogo
-          </Link>
-          <Link to="/como-funciona" onClick={close}>
+          </NavLink>
+          <NavLink to="/como-funciona" onClick={close}>
             Cómo Funciona
-          </Link>
+          </NavLink>
           {session && (
-            <Link
+            <NavLink
               to={session.type === "interno" ? "/admin" : "/tienda"}
               onClick={close}
             >
               Mi panel
-            </Link>
+            </NavLink>
           )}
         </nav>
         <div className="navbar-actions">

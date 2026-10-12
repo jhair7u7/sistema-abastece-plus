@@ -6,6 +6,7 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
 
   const addProduct = (product) => {
+    if (!(Number(product.stock_disponible)>0)) return;
     setCart((current) => {
       const exist = current.find(
         (item) => item.producto_id === product.producto_id,

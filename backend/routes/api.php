@@ -18,6 +18,25 @@ $usuarioController = new UsuarioController($conexion);
 $bodegueroController = new BodegueroController($conexion);
 
 $accion = isset($_GET["accion"]) ? $_GET["accion"] : "";
+require_once __DIR__.'/../controllers/InternalUsersController.php';
+if (InternalUsersController::execute($conexion,$accion,$metodo,$datos ?? [])) exit;
+require_once __DIR__ . '/../controllers/FavoritoController.php';
+if ((new FavoritoController($conexion))->execute($accion,$metodo,$datos ?? [])) exit;
+require_once __DIR__ . '/../controllers/AtencionController.php';
+if (AtencionController::execute($conexion,$accion,$metodo,$datos ?? [])) exit;
+require_once __DIR__ . '/../controllers/IncidenciaController.php';
+if ((new IncidenciaController($conexion))->execute($accion,$metodo,$datos ?? $_POST)) exit;
+require_once __DIR__ . '/../controllers/ComprobanteController.php';
+if ($metodo === 'GET' && in_array($accion, ['listar_comprobantes', 'buscar_comprobante'], true)) {
+    if ($accion === 'buscar_comprobante' && !isset($_GET['id'])) {
+        Response::json(['mensaje' => 'Debe indicar el ID del comprobante'], 400);
+        exit;
+    }
+    (new ComprobanteController($conexion))->consultar($accion === 'buscar_comprobante' ? $_GET['id'] : null);
+    exit;
+}
+require_once __DIR__ . '/../controllers/TransporteController.php';
+if (TransporteController::ejecutar($conexion, $accion, $metodo, $datos ?? [])) exit;
 require_once __DIR__ . '/../controllers/OperacionController.php';
 if (OperacionController::ejecutar($conexion, $accion, $metodo, $datos ?? [])) exit;
 if ($metodo === 'GET' && $accion === 'productos_internos') {
@@ -27,7 +46,7 @@ if ($metodo === 'GET' && $accion === 'productos_internos') {
 }
 // Catálogo público sin códigos internos ni datos de proveedores.
 if ($metodo === 'GET' && $accion === 'listar_productos') {
-    Response::json(['productos' => $conexion->query('SELECT *, precio_unitario AS precio, precio_unitario AS precio_base_sugerido, stock_total AS stock_disponible, imagen_principal AS imagen_url FROM vista_catalogo_disponible')->fetchAll()]); exit;
+    Response::json(['productos' => $conexion->query('SELECT v.*, v.precio_unitario AS precio, v.precio_unitario AS precio_base_sugerido, v.stock_total AS stock_disponible, v.imagen_principal AS imagen_url, COALESCE(ventas.unidades_vendidas,0) unidades_vendidas FROM vista_catalogo_disponible v LEFT JOIN (SELECT dc.producto_id,SUM(dc.cantidad) unidades_vendidas FROM detalle_compras dc JOIN compras c ON c.compra_id=dc.compra_id WHERE c.estado_pedido<>"CANCELADO" GROUP BY dc.producto_id) ventas ON ventas.producto_id=v.producto_id ORDER BY v.producto_id')->fetchAll()]); exit;
 }
 
 

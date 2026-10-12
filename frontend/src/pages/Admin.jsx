@@ -2,6 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Building2,
+  FileText,
+  Mail,
+  Phone,
+  Store,
+  UserRound,
+  Save,
+  Trash2,
   Image as ImageIcon,
   Pencil,
   Plus,
@@ -14,6 +21,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import Operacion from "./Operacion";
+import LogisticaOperacion from "./LogisticaOperacion";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../services/api";
 
@@ -28,14 +36,14 @@ const configs = {
     remove: "eliminar_producto",
     roles: ["LOGISTICA"],
     fields: [
-      ["nombre", "Nombre"],
+      ["nombre", "Nombre del producto"],
       ["codigo_sku", "Código interno"],
       ["categoria_id", "Categoría", "category"],
       ["marca", "Marca"],
       ["unidad_medida", "Presentación"],
       ["peso_kg", "Peso en kg", "number"],
       ["precio_base_sugerido", "Precio unitario", "number"],
-      ["descripcion", "Descripción"],
+      ["descripcion", "Descripción", "textarea"],
       ["imagen_archivo", "Imagen del producto", "file"],
     ],
   },
@@ -110,14 +118,22 @@ const roleNames = {
 export default function Admin() {
   const { session } = useAuth();
   const { pathname } = useLocation();
-  const role = session.account.rol;
+  const role = session.account.rol === "ADMINISTRADOR" && pathname.startsWith("/admin/logistica/") ? "LOGISTICA" : session.account.rol;
   const available = useMemo(
     () => Object.keys(configs).filter((k) => configs[k].roles.includes(role)),
     [role],
   );
   const logisticsModule = role === "LOGISTICA" ? pathname.split("/").pop() : "";
-  const managementModule = ["productos", "proveedores"].includes(logisticsModule) ? logisticsModule : "";
-  const operationModule = ["stock", "despachos", "facturas"].includes(logisticsModule) ? logisticsModule : "";
+  const managementModule = ["productos", "proveedores"].includes(
+    logisticsModule,
+  )
+    ? logisticsModule
+    : "";
+  const operationModule = ["stock", "despachos", "facturas"].includes(
+    logisticsModule,
+  )
+    ? logisticsModule
+    : "";
   const [tab, setTab] = useState(managementModule || available[0] || "");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -151,12 +167,34 @@ export default function Admin() {
     // La carga se repite al cambiar pestaña o identidad autenticada.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, session.token]);
-  const filteredRows = useMemo(() => rows.filter((row) => {
-    const matchesSearch = `${row.nombre || ""} ${row.marca || ""} ${row.codigo_sku || ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "Todas" || row.categoria_nombre === category;
-    return matchesSearch && matchesCategory;
-  }), [rows, search, category]);
-  const categories = useMemo(() => ["Todas", ...new Set(rows.map((row) => row.categoria_nombre).filter(Boolean))], [rows]);
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        const matchesSearch =
+          `${row.nombre || ""} ${row.marca || ""} ${row.codigo_sku || ""} ${row.nombre_comercial || ""} ${row.razon_social || ""} ${row.ruc || ""} ${row.contacto_nombre || ""} ${row.correo || ""}`
+            .toLowerCase()
+            .includes(search.toLowerCase());
+        const matchesCategory =
+          category === "Todas" ||
+          (tab === "proveedores"
+            ? category === "Activos"
+              ? Number(row.activo) === 1
+              : Number(row.activo) === 0
+            : row.categoria_nombre === category);
+        return matchesSearch && matchesCategory;
+      }),
+    [rows, search, category, tab],
+  );
+  const categories = useMemo(
+    () =>
+      tab === "proveedores"
+        ? ["Todas", "Activos", "Inactivos"]
+        : [
+            "Todas",
+            ...new Set(rows.map((row) => row.categoria_nombre).filter(Boolean)),
+          ],
+    [rows, tab],
+  );
   const openCreate = () => setModal({ mode: "create", data: blankFor(config) });
   const openEdit = (row) => {
     const data = { ...row, usuario: row.correo || row.usuario };
@@ -213,12 +251,23 @@ export default function Admin() {
     }
   };
   return (
-    <main className="dashboard-page admin-module-page" key={pathname}>
+    <main
+      className={`dashboard-page admin-module-page ${role === "LOGISTICA" ? "logistics-page" : ""}`}
+      key={pathname}
+    >
       <div className="dashboard-wrap">
-        {notice && <div className="admin-toast"><span>✓</span><div><strong>Listo</strong><small>{notice}</small></div></div>}
+        {notice && (
+          <div className="admin-toast">
+            <span>✓</span>
+            <div>
+              <strong>Listo</strong>
+              <small>{notice}</small>
+            </div>
+          </div>
+        )}
         <header className="dashboard-welcome">
           <div>
-            <span className="role-badge">{roleNames[role]}</span>
+            <span className="role-badge">{roleNames[session.account.rol]}</span>
             <h1>Panel de administración</h1>
             <p>
               Bienvenido, {session.account.nombre}. Administra la operación
@@ -226,22 +275,38 @@ export default function Admin() {
             </p>
           </div>
         </header>
-        <div className="metric-grid">
-          <Metric
-            icon={<Users />}
-            label="Módulos habilitados"
-            value={role === "LOGISTICA" ? 5 : available.length}
-          />
-          <Metric
-            icon={<ShieldCheck />}
-            label="Perfil de acceso"
-            value={roleNames[role]}
-          />
-          <Metric icon={<Truck />} label="Operación" value="Abastece+" />
-        </div>
-        {(role !== "LOGISTICA" || operationModule) && <div id="modulo-operacion" className="admin-module-anchor">
-          <Operacion key={operationModule} role={role} module={operationModule} />
-        </div>}
+        {!["stock", "despachos"].includes(operationModule) && (
+          <div className="metric-grid">
+            <Metric
+              icon={<Users />}
+              label="Módulos habilitados"
+              value={role === "LOGISTICA" ? 5 : available.length}
+            />
+            <Metric
+              icon={<ShieldCheck />}
+              label="Perfil de acceso"
+              value={roleNames[session.account.rol]}
+            />
+            <Metric icon={<Truck />} label="Operación" value="Abastece+" />
+          </div>
+        )}
+        {(role !== "LOGISTICA" || operationModule) && (
+          <div id="modulo-operacion" className="admin-module-anchor">
+            {role === "LOGISTICA" &&
+            ["stock", "despachos"].includes(operationModule) ? (
+              <LogisticaOperacion
+                key={operationModule}
+                module={operationModule}
+              />
+            ) : (
+              <Operacion
+                key={operationModule}
+                role={role}
+                module={operationModule}
+              />
+            )}
+          </div>
+        )}
         {role === "LOGISTICA" && operationModule ? null : !config ? (
           <section className="panel-card empty-state">
             <Truck size={42} />
@@ -250,23 +315,26 @@ export default function Admin() {
           </section>
         ) : (
           <>
-            {role !== "LOGISTICA" && <div
-              id="modulo-gestion"
-              className="dashboard-tabs admin-module-anchor"
-            >
-              {available.map((k) => (
-                <button
-                  key={k}
-                  className={tab === k ? "active" : ""}
-                  onClick={() => setTab(k)}
-                >
-                  {configs[k].title}
-                </button>
-              ))}
-            </div>}
+            {role !== "LOGISTICA" && (
+              <div
+                id="modulo-gestion"
+                className="dashboard-tabs admin-module-anchor"
+              >
+                {available.map((k) => (
+                  <button
+                    key={k}
+                    className={tab === k ? "active" : ""}
+                    onClick={() => setTab(k)}
+                  >
+                    {configs[k].title}
+                  </button>
+                ))}
+              </div>
+            )}
             <section className="panel-card">
               <div className="panel-head">
                 <div>
+                  {role === "LOGISTICA"}
                   <h2>{config.title}</h2>
                   <p style={{ color: "#64748b" }}>
                     {rows.length} registros encontrados
@@ -278,7 +346,30 @@ export default function Admin() {
                   </button>
                 )}
               </div>
-              {tab === "productos" && <div className="product-admin-filters"><label><Search size={18}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar por nombre, marca o código..."/></label><select value={category} onChange={(e)=>setCategory(e.target.value)}>{categories.map((item)=><option key={item}>{item}</option>)}</select></div>}
+              {["productos", "proveedores"].includes(tab) && (
+                <div className="product-admin-filters">
+                  <label>
+                    <Search size={18} />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={
+                        tab === "proveedores"
+                          ? "Buscar por nombre, RUC o contacto…"
+                          : "Buscar por nombre, marca o código…"
+                      }
+                    />
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    {categories.map((item) => (
+                      <option key={item}>{item}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {message && <div className="form-message error">{message}</div>}
               {loading ? (
                 <div className="empty-state">Cargando información...</div>
@@ -302,7 +393,14 @@ export default function Admin() {
             onSave={save}
           />
         )}
-        {confirmRow && <ConfirmDeactivate row={confirmRow} busy={deactivating} onCancel={()=>setConfirmRow(null)} onConfirm={confirmDeactivate}/>} 
+        {confirmRow && (
+          <ConfirmDeactivate
+            row={confirmRow}
+            busy={deactivating}
+            onCancel={() => setConfirmRow(null)}
+            onConfirm={confirmDeactivate}
+          />
+        )}
       </div>
     </main>
   );
@@ -311,13 +409,44 @@ function Metric({ icon, label, value }) {
   return (
     <div className="metric-card">
       <div className="metric-icon">{icon}</div>
-      <small>{label}</small>
-      <strong>{value}</strong>
+      <div>
+        <small>{label}</small>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }
 function ConfirmDeactivate({ row, busy, onCancel, onConfirm }) {
-  return createPortal(<div className="modal-backdrop confirmation-backdrop"><section className="modal-card confirmation-modal"><div className="confirmation-icon">!</div><span className="eyebrow">CONFIRMAR ACCIÓN</span><h2>¿Desactivar este registro?</h2><p><strong>{displayName(row)}</strong> dejará de estar disponible. Podrás conservar su información histórica.</p><div className="modal-actions"><button className="action-button secondary" onClick={onCancel} disabled={busy}>Cancelar</button><button className="action-button danger-solid" onClick={onConfirm} disabled={busy}>{busy ? "Desactivando…" : "Sí, desactivar"}</button></div></section></div>, document.body);
+  return createPortal(
+    <div className="modal-backdrop confirmation-backdrop">
+      <section className="modal-card confirmation-modal">
+        <div className="confirmation-icon">!</div>
+        <span className="eyebrow">CONFIRMAR ACCIÓN</span>
+        <h2>¿Desactivar este registro?</h2>
+        <p>
+          <strong>{displayName(row)}</strong> dejará de estar disponible. Podrás
+          conservar su información histórica.
+        </p>
+        <div className="modal-actions">
+          <button
+            className="action-button secondary"
+            onClick={onCancel}
+            disabled={busy}
+          >
+            Cancelar
+          </button>
+          <button
+            className="action-button danger-solid"
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? "Desactivando…" : "Sí, desactivar"}
+          </button>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
 }
 function displayName(r) {
   return (
@@ -341,7 +470,7 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
           <tr>
             <th>Nombre</th>
             <th>Identificación</th>
-            <th>Contacto</th>
+            <th>{type === "productos" ? "Precio / categoría" : "Contacto"}</th>
             <th>Estado / rol</th>
             <th>Acciones</th>
           </tr>
@@ -358,10 +487,21 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
               }
             >
               <td>
+                {type === "productos" && (
+                  <img
+                    className="log-table-thumb"
+                    src={r.imagen_url || "/logo.png"}
+                    alt=""
+                  />
+                )}
                 <strong>{displayName(r)}</strong>
                 <br />
                 <small>
-                  {r.razon_social && r.nombre_comercial ? r.razon_social : ""}
+                  {r.producto_id
+                    ? r.unidad_medida
+                    : r.razon_social && r.nombre_comercial
+                      ? r.razon_social
+                      : ""}
                 </small>
               </td>
               <td>{r.codigo_sku || r.ruc || `#${r.usuario_interno_id}`}</td>
@@ -374,7 +514,7 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
               </td>
               <td>
                 <span
-                  className={`status-badge ${r.activo === "0" || r.estado_cuenta === "BLOQUEADO" ? "blocked" : "active"}`}
+                  className={`status-badge ${r.activo === "0" || r.activo === 0 || r.estado_cuenta === "BLOQUEADO" ? "blocked" : "active"}`}
                 >
                   {r.rol
                     ? roleNames[r.rol]
@@ -399,6 +539,7 @@ function Table({ rows, type, onEdit, onRemove, canRemove }) {
                       className="action-button danger"
                       onClick={() => onRemove(r)}
                     >
+                      <Trash2 size={15} />
                       {type === "bodegueros" ? "Bloquear" : "Desactivar"}
                     </button>
                   )}
@@ -420,10 +561,22 @@ function Editor({ config, modal, setModal, onSave }) {
     }));
   return createPortal(
     <div className="modal-backdrop">
-      <section className="modal-card">
+      <section
+        className={`modal-card ${["Productos", "Proveedores"].includes(config.title) ? "log-modal log-editor-modal" : ""}`}
+      >
         <div className="modal-head">
           <h2>
             {modal.mode === "create" ? "Nuevo registro" : "Editar registro"}
+            {["Productos", "Proveedores"].includes(config.title) && (
+              <small className="log-editor-subtitle">
+                {modal.mode === "create" ? "Completa" : "Actualiza"} la
+                información{" "}
+                {config.title === "Proveedores"
+                  ? "del proveedor"
+                  : "del producto"}
+                .
+              </small>
+            )}
           </h2>
           <button className="icon-button" onClick={() => setModal(null)}>
             <X />
@@ -443,6 +596,13 @@ function Editor({ config, modal, setModal, onSave }) {
                 value={modal.data[name] ?? ""}
                 onChange={change}
                 currentImage={modal.data.imagen_url}
+                onClearImage={() =>
+                  setModal((v) => ({
+                    ...v,
+                    data: { ...v.data, imagen_archivo: null, imagen_url: "" },
+                  }))
+                }
+                decorated={config.title === "Proveedores"}
               />
             ))}
           {modal.error && (
@@ -456,17 +616,44 @@ function Editor({ config, modal, setModal, onSave }) {
             >
               Cancelar
             </button>
-            <button className="action-button">Guardar cambios</button>
+            <button className="action-button">
+              <Save size={18} />
+              Guardar cambios
+            </button>
           </div>
         </form>
       </section>
-    </div>, document.body
+    </div>,
+    document.body,
   );
 }
-function Field({ name, label, type, value, onChange, currentImage }) {
+function Field({
+  name,
+  label,
+  type,
+  value,
+  onChange,
+  currentImage,
+  onClearImage,
+  decorated,
+}) {
   if (type === "file")
     return (
-      <ImageDropZone name={name} label={label} file={value} currentImage={currentImage} onChange={onChange} />
+      <ImageDropZone
+        name={name}
+        label={label}
+        file={value}
+        currentImage={currentImage}
+        onChange={onChange}
+        onClear={onClearImage}
+      />
+    );
+  if (type === "textarea")
+    return (
+      <label className="form-field">
+        <span>{label}</span>
+        <textarea name={name} value={value} onChange={onChange} rows={2} />
+      </label>
     );
   if (type === "role")
     return (
@@ -483,7 +670,16 @@ function Field({ name, label, type, value, onChange, currentImage }) {
     );
   if (type === "category")
     return (
-      <label className="form-field"><span>{label}</span><select name={name} value={value} onChange={onChange} required><option value="">Selecciona una categoría</option><option value="1">Abarrotes</option><option value="2">Bebidas</option><option value="3">Limpieza</option><option value="4">Cuidado Personal</option></select></label>
+      <label className="form-field">
+        <span>{label}</span>
+        <select name={name} value={value} onChange={onChange} required>
+          <option value="">Selecciona una categoría</option>
+          <option value="1">Abarrotes</option>
+          <option value="2">Bebidas</option>
+          <option value="3">Limpieza</option>
+          <option value="4">Cuidado Personal</option>
+        </select>
+      </label>
     );
   if (type === "business")
     return (
@@ -497,22 +693,33 @@ function Field({ name, label, type, value, onChange, currentImage }) {
         </select>
       </label>
     );
+  const Icon = {
+    ruc: FileText,
+    razon_social: Building2,
+    nombre_comercial: Store,
+    contacto_nombre: UserRound,
+    correo: Mail,
+    telefono: Phone,
+  }[name];
   return (
     <label className="form-field">
       <span>{label}</span>
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        type={type || "text"}
-        step={type === "number" ? "any" : undefined}
-        required
-      />
+      <div className="log-field-control">
+        {decorated && Icon && <Icon size={20} />}
+        <input
+          name={name}
+          value={value}
+          onChange={onChange}
+          type={type || "text"}
+          step={type === "number" ? "any" : undefined}
+          required
+        />
+      </div>
     </label>
   );
 }
 
-function ImageDropZone({ name, label, file, currentImage, onChange }) {
+function ImageDropZone({ name, label, file, currentImage, onChange, onClear }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const preview = useMemo(
@@ -541,7 +748,10 @@ function ImageDropZone({ name, label, file, currentImage, onChange }) {
       <div
         className={`image-drop-zone ${dragging ? "is-dragging" : ""} ${preview ? "has-preview" : ""}`}
         onClick={() => inputRef.current?.click()}
-        onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
         onDrop={drop}
@@ -573,13 +783,22 @@ function ImageDropZone({ name, label, file, currentImage, onChange }) {
           </div>
         ) : (
           <div className="image-drop-zone__empty">
-            <span className="image-drop-zone__icon"><UploadCloud size={28} /></span>
+            <span className="image-drop-zone__icon">
+              <UploadCloud size={28} />
+            </span>
             <strong>Arrastra y suelta la imagen aquí</strong>
             <small>o haz clic para seleccionarla desde tu equipo</small>
           </div>
         )}
       </div>
-      <small className="image-upload-field__help">PNG, JPG o WEBP · máximo 5 MB</small>
+      {preview && onClear && (
+        <button type="button" className="log-image-remove" onClick={onClear}>
+          <Trash2 size={16} /> Quitar imagen
+        </button>
+      )}
+      <small className="image-upload-field__help">
+        PNG, JPG o WEBP · máximo 5 MB
+      </small>
     </div>
   );
 }

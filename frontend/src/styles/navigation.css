@@ -156,3 +156,15 @@
     width: 112px;
   }
 }
+
+/* Compact public navigation, preserving logo dimensions. */
+.navbar-container{padding-block:7px;min-height:60px}
+.menu a{position:relative;font-size:14px;padding-block:11px;transition:color .22s ease}
+.menu a:after{content:'';position:absolute;left:0;right:0;bottom:-4px;height:3px;border-radius:4px;background:#7620e6;transform:scaleX(0);transform-origin:center;transition:transform .25s ease}
+.menu a[aria-current="page"]{color:#7520e6}
+.menu a[aria-current="page"]:after{transform:scaleX(1)}
+.navbar-button{padding:10px 22px;font-size:13px}
+@media(max-width:900px){.navbar-container{padding-block:7px}.menu.menu-open{top:64px}.menu a:after{bottom:2px}}
+@media(prefers-reduced-motion:reduce){.menu a,.menu a:after{transition:none}}
+
+@media(max-width:520px){.navbar-button{padding:10px 14px;font-size:12px;white-space:nowrap}}

@@ -75,6 +75,7 @@ class BodegueroController
             return;
         }
 
+        try { $direccion=DireccionBodega::validar($datos); } catch (InvalidArgumentException $e) { Response::json(['mensaje'=>$e->getMessage()],400);return; }
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $resultado = $this->bodeguero->registrar(
@@ -86,7 +87,7 @@ class BodegueroController
             $ruc,
             $tipoEstablecimiento,
             $nombreComercial,
-            $razonSocial
+            $razonSocial, $direccion
         );
 
         if ($resultado) {
@@ -310,6 +311,7 @@ class BodegueroController
             return;
         }
 
+        try { $direccion=DireccionBodega::validar($datos); } catch (InvalidArgumentException $e) { Response::json(['mensaje'=>$e->getMessage()],400);return; }
         $resultado = $this->bodeguero->actualizar(
             $id,
             $nombre,
@@ -319,7 +321,7 @@ class BodegueroController
             $ruc,
             $tipoEstablecimiento,
             $nombreComercial,
-            $razonSocial
+            $razonSocial, $direccion
         );
 
         if ($resultado) {

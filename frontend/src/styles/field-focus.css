@@ -1,0 +1,31 @@
+/* Shared field focus: no rectangular rings on captions or nested controls. */
+label,
+label:focus,
+label:focus-visible,
+label:focus-within,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+.users-field:focus-within,
+.receipt-input-icon:focus-within,
+.catalog-search:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Existing rounded field borders provide feedback without outlining labels. */
+:is(input, select, textarea):not([type='checkbox']):not([type='radio']):focus,
+.users-field:focus-within,
+.receipt-input-icon:focus-within,
+.catalog-search:focus-within {
+  border-color: #a58cdb;
+}
+
+/* A hidden switch still needs a visible keyboard focus indicator. */
+.catalog-stock-switch:has(input:focus-visible) > span {
+  outline: 2px solid #a58cdb;
+  outline-offset: 3px;
+}

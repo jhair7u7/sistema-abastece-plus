@@ -133,7 +133,9 @@ class AuthMiddleware
     {
         $usuario = self::verificarToken();
 
-        if (!isset($usuario["rol"]) || !in_array($usuario["rol"], $rolesPermitidos, true)) {
+        // Administrador puede operar los módulos internos; no se suplanta un bodeguero.
+        $adminInterno = ($usuario["rol"] ?? '') === 'ADMINISTRADOR' && count(array_intersect($rolesPermitidos,['ADMINISTRADOR','LOGISTICA','TRANSPORTISTA','GESTOR_ATENCION'])) > 0;
+        if (!isset($usuario["rol"]) || (!in_array($usuario["rol"], $rolesPermitidos, true) && !$adminInterno)) {
             Response::json([
                 "mensaje" => "No tienes permisos para realizar esta acción"
             ], 403);

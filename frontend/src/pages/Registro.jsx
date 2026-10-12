@@ -12,6 +12,7 @@ const initial = {
   tipo_establecimiento: "BODEGA",
   nombre_comercial: "",
   razon_social: "",
+  direccion_exacta: "", distrito: "", provincia: "Lima", departamento: "Lima", referencia: "",
 };
 export default function Registro() {
   const [form, setForm] = useState(initial);
@@ -132,6 +133,11 @@ export default function Registro() {
                 <option value="OTRO">Otro</option>
               </select>
             </label>
+            <label className="form-field full"><span>Dirección exacta de la bodega</span><input required name="direccion_exacta" maxLength={200} placeholder="Avenida, calle o jirón, número, manzana y lote" value={form.direccion_exacta} onChange={change}/></label>
+            <Field label="Distrito" name="distrito" maxLength={60} value={form.distrito} onChange={change}/>
+            <Field label="Provincia" name="provincia" maxLength={50} value={form.provincia} onChange={change}/>
+            <Field label="Departamento" name="departamento" maxLength={50} value={form.departamento} onChange={change}/>
+            <label className="form-field"><span>Referencia (opcional)</span><input name="referencia" maxLength={200} value={form.referencia} onChange={change}/></label>
             {status.message && (
               <div
                 className={`form-message ${status.error ? "error" : "success"}`}

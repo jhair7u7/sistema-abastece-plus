@@ -1,0 +1,31 @@
+/* Movimiento compartido para todos los módulos internos. */
+.admin-module-page .panel-head, .admin-module-page .operation-heading,
+.admin-module-page .product-admin-filters, .admin-module-page .dashboard-tabs {
+  animation: internal-content-in .4s ease both;
+}
+.admin-module-page .data-table tbody tr {
+  animation: internal-row-in .36s ease both;
+  animation-delay: var(--row-delay, 0ms);
+}
+.admin-module-page .data-table tbody tr:nth-child(2) { animation-delay: .04s; }
+.admin-module-page .data-table tbody tr:nth-child(3) { animation-delay: .08s; }
+.admin-module-page .data-table tbody tr:nth-child(4) { animation-delay: .12s; }
+.admin-module-page .data-table tbody tr:nth-child(5) { animation-delay: .16s; }
+.admin-module-page .metric-card, .admin-module-page .data-table tbody tr {
+  transition: background .2s ease, box-shadow .2s ease;
+}
+.admin-module-page .data-table tbody tr:hover { background: #faf5ff; box-shadow: inset 3px 0 #7c3aed; }
+.admin-module-page button, .admin-navbar__modules a { transition: background .2s ease, box-shadow .2s ease, color .2s ease; }
+.modal-backdrop { animation: internal-fade-in .18s ease both; }
+.modal-card { animation: internal-dialog-in .24s ease both; }
+@keyframes internal-content-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes internal-row-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes internal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes internal-dialog-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .admin-module-page *, .receipts-page *, .modal-backdrop, .modal-card {
+    animation: none !important; transition: none !important;
+  }
+  .admin-module-page .data-table tbody tr { opacity: 1; }
+  .receipt-stat:hover, .receipt-button:hover:not(:disabled) { transform: none; }
+}

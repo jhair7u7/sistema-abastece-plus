@@ -12,7 +12,7 @@ const matrix={listar:['ADMINISTRADOR'],listar_bodegueros:['GESTOR_ATENCION'],sto
 let checks=5;
 for(const [action,allowed] of Object.entries(matrix)) {
  assert.equal((await request(action)).status,401);checks++;
- for(const [role,token] of Object.entries(tokens)){const r=await request(action,{token});assert.equal(r.status,allowed.includes(role)?200:403,`${role}: ${action}`);checks++;}
+ for(const [role,token] of Object.entries(tokens)){const r=await request(action,{token});assert.equal(r.status,(allowed.includes(role)||(role==='ADMINISTRADOR'&&allowed.some(r=>r!=='BODEGUERO')))?200:403,`${role}: ${action}`);checks++;}
 }
 const catalog=await request('listar_productos');assert.equal(catalog.status,200);assert(catalog.data.productos.length>0);assert(catalog.data.productos.every(p=>Number(p.stock_disponible)>0&&!('codigo_interno' in p)));checks++;
 const routes=await request('mis_rutas',{token:tokens.TRANSPORTISTA});assert(routes.data.datos.every(r=>r.transportista_id===3&&r.items.length));checks++;

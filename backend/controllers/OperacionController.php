@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__.'/LogisticaService.php';
 // Operaciones del proyecto: todas las consultas se autorizan en el servidor.
 class OperacionController
 {
@@ -9,7 +10,7 @@ class OperacionController
             'stock' => ['LOGISTICA'], 'ajustar_stock' => ['LOGISTICA'],
             'despachos' => ['LOGISTICA'], 'asignar_despacho' => ['LOGISTICA'],
             'facturas' => ['LOGISTICA'], 'emitir_factura' => ['LOGISTICA'],
-            'transportistas' => ['LOGISTICA'],
+            'transportistas' => ['LOGISTICA'], 'previsualizar_despacho' => ['LOGISTICA'],
             'mis_rutas' => ['TRANSPORTISTA'], 'actualizar_entrega' => ['TRANSPORTISTA'],
             'incidencias' => ['GESTOR_ATENCION'], 'atender_incidencia' => ['GESTOR_ATENCION'],
             'conformidades' => ['GESTOR_ATENCION'], 'revisar_conformidad' => ['GESTOR_ATENCION'],
@@ -19,7 +20,7 @@ class OperacionController
         ];
         if (!isset($roles[$accion])) return false;
         $user = AuthMiddleware::permitirRoles($roles[$accion]);
-        $lecturas = ['stock','despachos','facturas','transportistas','mis_rutas','incidencias','conformidades','mis_pedidos','mis_facturas','detalle_pedido','tarjetas_prueba'];
+        $lecturas = ['stock','despachos','facturas','transportistas','previsualizar_despacho','mis_rutas','incidencias','conformidades','mis_pedidos','mis_facturas','detalle_pedido','tarjetas_prueba'];
         if ($metodo !== (in_array($accion, $lecturas, true) ? 'GET' : 'POST')) {
             Response::json(['mensaje'=>'Método no permitido'],405); return true;
         }
@@ -30,15 +31,20 @@ class OperacionController
             $rows = [];
             switch ($accion) {
                 case 'stock':
-                    $rows=$query('SELECT l.*, p.nombre, p.marca, c.nombre AS categoria_nombre FROM inventario_lotes l JOIN productos p ON p.producto_id=l.producto_id JOIN categorias c ON c.categoria_id=p.categoria_id ORDER BY c.nombre,p.nombre')->fetchAll(); break;
+                    $rows=$query('SELECT l.*, p.nombre, p.marca, (SELECT pi.ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id ORDER BY pi.es_principal DESC,pi.imagen_id LIMIT 1) AS imagen_url, c.nombre AS categoria_nombre FROM inventario_lotes l JOIN productos p ON p.producto_id=l.producto_id JOIN categorias c ON c.categoria_id=p.categoria_id ORDER BY c.nombre,p.nombre')->fetchAll(); break;
                 case 'transportistas':
-                    $rows=$query("SELECT usuario_interno_id, nombre FROM usuarios_internos WHERE activo=1 AND rol='TRANSPORTISTA'")->fetchAll(); break;
+                    $rows=(new LogisticaService($db))->drivers(); break;
+                case 'previsualizar_despacho':
+                    $rows=(new LogisticaService($db))->preview($_GET['transportista_id']??0,$_GET['compra_id']??0);break;
                 case 'despachos':
-                    $rows=$query('SELECT c.compra_id,c.codigo_compra,c.estado_pedido,g.guia_id,g.codigo_guia,r.ruta_id,r.transportista_id,r.estado_entrega FROM compras c LEFT JOIN guias_remision g ON g.compra_id=c.compra_id LEFT JOIN rutas_despacho r ON r.guia_id=g.guia_id')->fetchAll(); break;
+                    $rows=$query("SELECT c.compra_id,c.codigo_compra,c.fecha_compra,c.total,c.estado_pedido,g.guia_id,g.codigo_guia,r.ruta_id,r.transportista_id,r.estado_entrega,r.descripcion_ruta,
+                      CONCAT_WS(' ',u.nombre,u.apellidos) AS transportista_nombre,pa.metodo_pago,pa.codigo_operacion,
+                      (SELECT MAX(cp.comprobante_id) FROM comprobantes_pago cp WHERE cp.compra_id=c.compra_id AND cp.tipo_comprobante='FACTURA_ELECTRONICA' AND cp.metodo_pago IN ('YAPE','EFECTIVO','TARJETA')) AS comprobante_id
+                      FROM compras c LEFT JOIN guias_remision g ON g.compra_id=c.compra_id LEFT JOIN rutas_despacho r ON r.guia_id=g.guia_id LEFT JOIN usuarios_internos u ON u.usuario_interno_id=r.transportista_id LEFT JOIN pagos_compra pa ON pa.compra_id=c.compra_id ORDER BY c.fecha_compra DESC,c.compra_id DESC")->fetchAll(); break;
                 case 'facturas':
                     $rows=$query('SELECT * FROM comprobantes_pago')->fetchAll(); break;
                 case 'mis_rutas':
-                    $rows=$query('SELECT * FROM vista_guia_transportista WHERE transportista_id=?',[$user['id']])->fetchAll();
+                    $rows=$query('SELECT * FROM vista_guia_transportista WHERE (?=1 OR transportista_id=?)',[$user['rol']==='ADMINISTRADOR'?1:0,$user['id']])->fetchAll();
                     foreach ($rows as &$r) $r['items']=$query('SELECT p.nombre,dc.cantidad,p.unidad_medida FROM detalle_compras dc JOIN productos p ON p.producto_id=dc.producto_id JOIN guias_remision g ON g.compra_id=dc.compra_id WHERE g.guia_id=?',[$r['guia_id']])->fetchAll();
                     unset($r); break;
                 case 'incidencias':
@@ -52,9 +58,9 @@ class OperacionController
                 case 'tarjetas_prueba':
                     $rows=$query('SELECT tarjeta_id,banco,marca,numero,ultimos_digitos,titular,vencimiento,color_inicio,color_fin FROM tarjetas_prueba WHERE activa=1 ORDER BY tarjeta_id')->fetchAll(); break;
                 case 'detalle_pedido':
-                    $pedido=$query("SELECT c.*,CONCAT(b.nombre,' ',b.apellidos) comprador,b.nombre_comercial,d.direccion_exacta,d.distrito,d.provincia,d.referencia,cp.metodo_pago,cp.codigo_operacion,COALESCE(r.estado_entrega,'ASIGNADO') estado_entrega,r.hora_salida,r.hora_entrega,r.notas_entrega FROM compras c JOIN bodegueros b ON b.bodeguero_id=c.bodeguero_id JOIN direcciones d ON d.direccion_id=c.direccion_id LEFT JOIN comprobantes_pago cp ON cp.compra_id=c.compra_id LEFT JOIN guias_remision g ON g.compra_id=c.compra_id LEFT JOIN rutas_despacho r ON r.guia_id=g.guia_id WHERE c.compra_id=? AND c.bodeguero_id=?",[$_GET['id']??0,$user['id']])->fetch();
+                    $pedido=$query("SELECT c.*,CONCAT(b.nombre,' ',b.apellidos) comprador,b.nombre_comercial,d.direccion_exacta,d.distrito,d.provincia,d.referencia,COALESCE(pa.metodo_pago,cp.metodo_pago) metodo_pago,COALESCE(pa.codigo_operacion,cp.codigo_operacion) codigo_operacion,COALESCE(r.estado_entrega,'ASIGNADO') estado_entrega,r.hora_salida,r.hora_entrega,r.notas_entrega FROM compras c JOIN bodegueros b ON b.bodeguero_id=c.bodeguero_id JOIN direcciones d ON d.direccion_id=c.direccion_id LEFT JOIN comprobantes_pago cp ON cp.compra_id=c.compra_id LEFT JOIN pagos_compra pa ON pa.compra_id=c.compra_id LEFT JOIN guias_remision g ON g.compra_id=c.compra_id LEFT JOIN rutas_despacho r ON r.guia_id=g.guia_id WHERE c.compra_id=? AND c.bodeguero_id=?",[$_GET['id']??0,$user['id']])->fetch();
                     if (!$pedido) throw new InvalidArgumentException('Pedido no encontrado');
-                    $pedido['items']=$query('SELECT p.nombre,p.marca,p.unidad_medida,dc.cantidad,dc.precio_unitario,dc.total_linea,(SELECT ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id AND pi.es_principal=1 LIMIT 1) imagen_url FROM detalle_compras dc JOIN productos p ON p.producto_id=dc.producto_id WHERE dc.compra_id=?',[$pedido['compra_id']])->fetchAll();
+                    $pedido['items']=$query('SELECT dc.detalle_compra_id,p.nombre,p.marca,p.unidad_medida,dc.cantidad,dc.precio_unitario,dc.total_linea,(SELECT ruta_imagen FROM producto_imagenes pi WHERE pi.producto_id=p.producto_id AND pi.es_principal=1 LIMIT 1) imagen_url FROM detalle_compras dc JOIN productos p ON p.producto_id=dc.producto_id WHERE dc.compra_id=?',[$pedido['compra_id']])->fetchAll();
                     $rows=$pedido; break;
                 case 'crear_compra':
                     $items=$datos['items']??[]; $metodo=$datos['metodo_pago']??'';
@@ -79,7 +85,7 @@ class OperacionController
                     foreach($lineas as $linea){$query('INSERT INTO detalle_compras (compra_id,producto_id,lote_id,cantidad,precio_unitario,total_linea) VALUES (?,?,?,?,?,?)',[$compraId,...$linea]);$query('UPDATE inventario_lotes SET stock_disponible=stock_disponible-? WHERE lote_id=?',[$linea[2],$linea[1]]);}
                     $bodega=$query('SELECT ruc FROM bodegueros WHERE bodeguero_id=?',[$user['id']])->fetch();
                     $operacion=($metodo==='YAPE'?'YAPE':($metodo==='EFECTIVO'?'EFECTIVO':'CARD')).'-SIM-'.str_pad($compraId,6,'0',STR_PAD_LEFT);
-                    $query("INSERT INTO comprobantes_pago (compra_id,tipo_comprobante,serie,correlativo,ruc_emisor,ruc_receptor,subtotal,igv,total,metodo_pago,codigo_operacion) VALUES (?,'FACTURA_ELECTRONICA','D001',?,'00000000999',?,?,?,?,?,?)",[$compraId,$compraId,$bodega['ruc'],$subtotal,$igv,$total,$metodo,$operacion]);
+                    $query('INSERT INTO pagos_compra (compra_id,metodo_pago,codigo_operacion) VALUES (?,?,?)',[$compraId,$metodo,$operacion]);
                     $db->commit(); $rows=['compra_id'=>(int)$compraId,'codigo_compra'=>$codigo,'codigo_operacion'=>$operacion]; break;
                 case 'ajustar_stock':
                     if (!isset($datos['stock']) || filter_var($datos['stock'],FILTER_VALIDATE_INT)===false || $datos['stock']<0) throw new InvalidArgumentException('El stock debe ser un entero no negativo');
@@ -91,7 +97,8 @@ class OperacionController
                     $query('INSERT INTO movimientos_stock (lote_id,variacion,motivo,registrado_por) VALUES (?,?,?,?)',[$l['lote_id'],$delta,trim($datos['motivo']??'Ajuste de proyecto'),$user['id']]);
                     $db->commit(); break;
                 case 'asignar_despacho':
-                    if (empty($datos['placa']) || empty($datos['ruta'])) throw new InvalidArgumentException('Indica placa y recorrido');
+                    $plate=(new LogisticaService($db))->plate($datos['transportista_id']??0);
+                    if (empty(trim($datos['ruta']??''))) throw new InvalidArgumentException('Indica el recorrido');
                     $db->beginTransaction();
                     $c=$query('SELECT * FROM compras WHERE compra_id=? FOR UPDATE',[$datos['id']??0])->fetch();
                     if (!$c || in_array($c['estado_pedido'],['ENTREGADO','CANCELADO','DESPACHADO'])) throw new InvalidArgumentException('Pedido no disponible para asignación');
@@ -100,10 +107,12 @@ class OperacionController
                     if (!$g) {
                         $items=$query('SELECT COALESCE(SUM(cantidad),0) FROM detalle_compras WHERE compra_id=?',[$c['compra_id']])->fetchColumn();
                         if (!$items) throw new InvalidArgumentException('El pedido no contiene productos');
-                        $query('INSERT INTO guias_remision (compra_id,codigo_guia,total_bultos,peso_total_kg,costo_total,detalle_carga,emitida_por) VALUES (?,?,?,0,?,?,?)',[$c['compra_id'],'DEMO-GR-'.$c['compra_id'],$items,$c['total'],'Ver detalle de productos del pedido',$user['id']]);
+                        $query('INSERT INTO guias_remision (compra_id,codigo_guia,total_bultos,peso_total_kg,costo_total,detalle_carga,emitida_por) VALUES (?,?,?,0,?,?,?)',[$c['compra_id'],'GR-'.date('Y').'-'.str_pad($c['compra_id'],6,'0',STR_PAD_LEFT),$items,$c['total'],'Ver detalle de productos del pedido',$user['id']]);
                         $g=$db->lastInsertId();
                     }
-                    $query("INSERT INTO rutas_despacho (guia_id,transportista_id,vehiculo_placa,punto_partida,direccion_destino_id,descripcion_ruta) VALUES (?,?,?,'Almacén demo',?,?) ON DUPLICATE KEY UPDATE transportista_id=VALUES(transportista_id),vehiculo_placa=VALUES(vehiculo_placa),descripcion_ruta=VALUES(descripcion_ruta)",[$g,$datos['transportista_id'],$datos['placa'],$c['direccion_id'],$datos['ruta']]);
+                    $previous=$query('SELECT ruta_id,transportista_id FROM rutas_despacho WHERE guia_id=? FOR UPDATE',[$g])->fetch();
+                    $query("INSERT INTO rutas_despacho (guia_id,transportista_id,vehiculo_placa,punto_partida,direccion_destino_id,descripcion_ruta) VALUES (?,?,?,'Av. Argentina N.º 2833, Zona Industrial, Callao, Perú',?,?) ON DUPLICATE KEY UPDATE transportista_id=VALUES(transportista_id),vehiculo_placa=VALUES(vehiculo_placa),descripcion_ruta=VALUES(descripcion_ruta)",[$g,$datos['transportista_id'],$plate,$c['direccion_id'],$datos['ruta']]);
+                    if ($previous && (int)$previous['transportista_id']!==(int)$datos['transportista_id']) $query('DELETE FROM rutas_gps WHERE ruta_id=?',[$previous['ruta_id']]);
                     $query("UPDATE compras SET estado_pedido='PREPARANDO' WHERE compra_id=?",[$c['compra_id']]);
                     $db->commit(); break;
                 case 'actualizar_entrega':
@@ -126,11 +135,8 @@ class OperacionController
                     if (!$query('SELECT conformidad_id FROM conformidades_producto WHERE conformidad_id=?',[$datos['id']??0])->fetch()) throw new InvalidArgumentException('Conformidad no encontrada');
                     $query('UPDATE conformidades_producto SET estado=?,observaciones=?,revisado_por=? WHERE conformidad_id=?',[$datos['estado'],$datos['notas']??null,$user['id'],$datos['id']]); break;
                 case 'emitir_factura':
-                    $db->beginTransaction();
-                    $c=$query('SELECT c.*,b.ruc FROM compras c JOIN bodegueros b ON b.bodeguero_id=c.bodeguero_id WHERE c.compra_id=? FOR UPDATE',[$datos['id']??0])->fetch();
-                    if (!$c || $c['estado_pedido']==='CANCELADO') throw new InvalidArgumentException('Pedido no válido');
-                    $query("INSERT INTO comprobantes_pago (compra_id,tipo_comprobante,serie,correlativo,ruc_emisor,ruc_receptor,subtotal,igv,total,metodo_pago,codigo_operacion) VALUES (?,'FACTURA_ELECTRONICA','DEMO',?,'00000000999',?,?,?,?,'EFECTIVO',?)",[$c['compra_id'],$c['compra_id'],$c['ruc'],$c['subtotal'],$c['igv'],$c['total'],'DEMO-'.$c['compra_id']]);
-                    $db->commit(); break;
+                    $db->beginTransaction();$rows=(new LogisticaService($db))->issue($datos['id']??0);$db->commit();
+                    Response::json(['datos'=>$rows,'mensaje'=>($rows['ya_emitida']?'La factura ya estaba emitida: ':'Factura emitida: ').$rows['serie'].'-'.str_pad($rows['correlativo'],6,'0',STR_PAD_LEFT)]);return true;
             }
             Response::json(['datos'=>$rows,'mensaje'=>in_array($accion,$lecturas,true)?'Consulta completada':'Cambios guardados']);
         } catch (InvalidArgumentException $e) {

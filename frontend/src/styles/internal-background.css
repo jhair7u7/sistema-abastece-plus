@@ -1,0 +1,5 @@
+/* Fondo vectorial compartido por todos los roles del portal interno. */
+.internal-shell{position:relative;isolation:isolate;min-height:100dvh;background:#f2f5ff}
+.internal-background{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#f2f5ff url('/backgrounds/internal-waves.svg') center / 100% 100% no-repeat}
+.internal-shell :is(.admin-module-page,.logistics-page,.receipts-page,.transport-page){background:transparent}
+@media(max-width:600px){.internal-background{background-size:160% 100%}}

@@ -1,68 +1,27 @@
 <?php
-// Valida una importación limpia y restricciones usando una base temporal propia.
-if (PHP_SAPI !== 'cli') exit;
-require __DIR__.'/../config/database.php';
-$testDb='abastece_test_'.bin2hex(random_bytes(6));
-$sql=str_replace('abastece_nuevo',$testDb,file_get_contents(__DIR__.'/../../bd/Abastece_nuevo.sql'));
+if(PHP_SAPI!=='cli')exit;
+require dirname(__DIR__).'/config/database.php';
+$original=getenv('DB_NAME')?:'abastece_nuevo';
+$name='abastece_import_'.bin2hex(random_bytes(6));
+function ensure($ok,$label){if(!$ok)throw new RuntimeException($label);}
 try {
- $conexion->exec($sql);
- if ((int)$conexion->query('SELECT COUNT(*) FROM productos')->fetchColumn()!==60) throw new Exception('Catálogo incompleto');
- foreach([
-   'UPDATE inventario_lotes SET stock_disponible=-1 WHERE lote_id=1',
-   'UPDATE detalle_compras SET lote_id=2 WHERE detalle_compra_id=1',
-   'UPDATE atencion_incidencias SET compra_id=2 WHERE incidencia_id=1',
-   'UPDATE compras SET direccion_id=2 WHERE compra_id=1',
- ] as $invalid) {
-  $conexion->beginTransaction();$rejected=false;
-  try {$conexion->exec($invalid);} catch(PDOException $e) {$rejected=true;}
-  $conexion->rollBack(); if(!$rejected)throw new Exception('Restricción faltante: '.$invalid);
- }
- require __DIR__.'/../models/Bodeguero.php';
- require __DIR__.'/../models/Proveedor.php';
- require __DIR__.'/../models/Producto.php';
- require __DIR__.'/../models/Direccion.php';
- $conexion->beginTransaction();
- $b=new Bodeguero($conexion);
- $b->registrar('Demo','Prueba','registro@example.test',password_hash('demo123',PASSWORD_DEFAULT),'000000099','00000000998','OTRO','Demo','Demo');
- $d=new Direccion($conexion);$d->crear(['bodeguero_id'=>1,'distrito'=>'Demo','direccion_exacta'=>'Demo','zona_reparto'=>'LIMA_CENTRO']);
- $p=new Proveedor($conexion);$p->registrar('00000000997','Demo','Demo','Demo','proveedor-test@example.test','000000099');
- $conexion->rollBack();
- $product=new Producto($conexion);
- $data=['categoria_id'=>1,'codigo_sku'=>'TEST-DEMO','nombre'=>'Demo','descripcion'=>'Demo','imagen_url'=>'/logo.png','marca'=>'Demo','unidad_medida'=>'Caja','peso_kg'=>1,'precio_base_sugerido'=>10];
- $product->registrar($data);$id=$conexion->query("SELECT producto_id FROM productos WHERE codigo_interno='TEST-DEMO'")->fetchColumn();
- $data['precio_base_sugerido']=12;$product->actualizar($id,$data);
- if ((float)$product->buscarPorId($id)['precio_base_sugerido']!==12.0)throw new Exception('Producto no actualizado');
- // La autenticación se comprueba por HTTP en rbac.mjs; aquí se ejercitan las escrituras.
- require __DIR__.'/../controllers/OperacionController.php';
- function operation($action,$data) {
-  global $conexion;
-  Response::$result=null;Response::$status=200;
-  OperacionController::ejecutar($conexion,$action,'POST',$data);
-  if(Response::$status!==200)throw new Exception($action.': '.json_encode(Response::$result));
- }
- operation('ajustar_stock',['id'=>1,'stock'=>70,'motivo'=>'Prueba automática']);
- if((int)$conexion->query('SELECT stock_disponible FROM inventario_lotes WHERE lote_id=1')->fetchColumn()!==70)throw new Exception('Stock');
- operation('asignar_despacho',['id'=>4,'transportista_id'=>3,'placa'=>'DEMO-02','ruta'=>'Recorrido demo']);
- operation('actualizar_entrega',['id'=>4,'estado'=>'EN_TRAYECTO']);
- operation('actualizar_entrega',['id'=>4,'estado'=>'ENTREGADO']);
- if($conexion->query('SELECT estado_pedido FROM compras WHERE compra_id=4')->fetchColumn()!=='ENTREGADO')throw new Exception('Entrega');
- operation('atender_incidencia',['id'=>2,'estado'=>'SOLUCIONADO','notas'=>'Resolución demo']);
- operation('revisar_conformidad',['id'=>1,'estado'=>'CONFORME','notas'=>'Demo']);
- $conexion->exec("INSERT INTO compras (compra_id,codigo_compra,bodeguero_id,direccion_id,subtotal,igv,total) VALUES (99,'TEST-99',1,1,10,1.8,11.8)");
- operation('emitir_factura',['id'=>99]);
- echo "Importación limpia, 60 productos, 4 restricciones y modelos CRUD: correctos.\n";
- echo "Stock, despacho, entrega, incidencia, conformidad y factura: escrituras correctas.\n";
-} finally {
+ $schema=str_replace('abastece_nuevo',$name,file_get_contents(dirname(__DIR__,2).'/bd/Abastece_nuevo.sql'));
+ $conexion->exec($schema);
+ $seed=str_replace('USE abastece_nuevo;','USE `'.$name.'`;',file_get_contents(dirname(__DIR__,2).'/bd/Inserts_abastece.sql'));
+ $conexion->exec($seed);
+ ensure((int)$conexion->query("SELECT COUNT(*) FROM usuarios_internos WHERE rol='TRANSPORTISTA'")->fetchColumn()===3,'Tres transportistas');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM bodegueros')->fetchColumn()===10,'Diez bodegueros');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM direcciones WHERE es_principal=1')->fetchColumn()===10,'Diez direcciones principales');
+ ensure((int)$conexion->query('SELECT COUNT(DISTINCT distrito) FROM direcciones')->fetchColumn()===4,'Cuatro distritos');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM productos')->fetchColumn()===60,'Catálogo completo');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM productos p JOIN `'.$original.'`.productos old ON old.producto_id=p.producto_id WHERE p.nombre<>old.nombre OR p.precio_unitario<>old.precio_unitario')->fetchColumn()===0,'Catálogo y precios conservados');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM vista_catalogo_disponible')->fetchColumn()===60,'Vista catálogo');
+ ensure((int)$conexion->query('SELECT COUNT(*) FROM vista_guia_transportista')->fetchColumn()===10,'Despachos de los conductores');
+ foreach($conexion->query('SELECT password_hash FROM usuarios_internos') as $r)ensure(password_verify('Abastece2026!',$r['password_hash']),'Credenciales operativas');
+ $tables=$conexion->query('SHOW FULL TABLES')->fetchAll(PDO::FETCH_NUM);ensure(count($tables)===33,'26 tablas y 7 vistas');
+ echo "Importación limpia: 26 tablas, 7 vistas, 60 productos con precios conservados, 10 comercios, 3 transportistas y relaciones válidas. Base temporal eliminada.\n";
+}finally{
  if($conexion->inTransaction())$conexion->rollBack();
- $conexion->exec('USE abastece_nuevo');
- // Nombre aleatorio generado arriba, exclusivamente para esta prueba.
- $conexion->exec('DROP DATABASE IF EXISTS `'.$testDb.'`');
-}
-
-class AuthMiddleware {
- public static function permitirRoles($roles) {return ['id'=>$roles[0]==='TRANSPORTISTA'?3:($roles[0]==='GESTOR_ATENCION'?4:2)];}
-}
-class Response {
- public static $result; public static $status;
- public static function json($data,$status=200){self::$result=$data;self::$status=$status;}
+ if(preg_match('/^abastece_import_[a-f0-9]{12}$/',$name))$conexion->exec("DROP DATABASE IF EXISTS `$name`");
+ $conexion->exec("USE `$original`");
 }

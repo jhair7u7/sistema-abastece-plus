@@ -1,11 +1,15 @@
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env?.VITE_API_URL || '/api';
 
 export async function apiRequest(action, options = {}) {
-  const { method = 'GET', body, token, params } = options;
+  const { method = 'GET', body, token, params, timeoutMs = 0 } = options;
   const isFormData = body instanceof FormData;
   const query = new URLSearchParams({ accion: action, ...params });
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timer = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
   const response = await fetch(`${API_URL}/?${query}`, {
     method,
+    ...(controller ? { signal: controller.signal } : {}),
     headers: {
       ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -30,4 +34,8 @@ export async function apiRequest(action, options = {}) {
   }
 
   return data;
+  } catch (error) {
+    if (controller?.signal.aborted) throw new Error('La solicitud tardó demasiado. Inténtalo otra vez; los controles se han habilitado.', { cause: error });
+    throw error;
+  } finally { if (timer !== null) window.clearTimeout(timer); }
 }

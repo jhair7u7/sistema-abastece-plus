@@ -13,3 +13,28 @@
 @import './auth.css';
 @import './dashboard.css';
 @import './admin-navigation.css';
+
+@import './receipts.css';
+
+@import './internal-motion.css';
+
+@import 'leaflet/dist/leaflet.css';
+@import './transport.css';
+
+@import './logistica.css';
+
+@import './liquid-navigation.css';
+
+@import './internal-background.css';
+
+@import "./merchant.css";
+
+@import "./attention.css";
+
+@import "./users.css";
+
+@import "./internal-polish.css";
+
+@import "./users-scale.css";
+
+@import './field-focus.css';

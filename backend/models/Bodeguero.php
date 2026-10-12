@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__."/DireccionBodega.php";
+
 class Bodeguero
 {
     private $conexion;
@@ -95,7 +97,9 @@ class Bodeguero
         $stmt = $this->conexion->prepare($sql);
         $stmt->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row)$row=array_merge($row,DireccionBodega::consultar($this->conexion,$row['bodeguero_id'])??[]);
+        return $rows;
     }
 
     public function buscarPorId($id)
@@ -137,7 +141,8 @@ class Bodeguero
         $ruc,
         $tipoEstablecimiento,
         $nombreComercial,
-        $razonSocial
+        $razonSocial,
+        $direccion
     ) {
         $sql = "INSERT INTO bodegueros
                 (
@@ -161,7 +166,7 @@ class Bodeguero
                     :ruc,
                     :tipo_establecimiento,
                     :nombre_comercial,
-                    :razon_social, IF(:tipo_otro = 'OTRO', 'Establecimiento demo', NULL)
+                    :razon_social, IF(:tipo_otro = 'OTRO', 'Otro establecimiento', NULL)
                 )";
 
         $stmt = $this->conexion->prepare($sql);
@@ -177,9 +182,8 @@ class Bodeguero
         $stmt->bindParam(":nombre_comercial", $nombreComercial);
         $stmt->bindParam(":razon_social", $razonSocial);
 
-        return $stmt->execute();
+        return $this->guardarConDireccion($stmt,null,$direccion);
     }
-
     public function actualizar(
         $id,
         $nombre,
@@ -189,7 +193,8 @@ class Bodeguero
         $ruc,
         $tipoEstablecimiento,
         $nombreComercial,
-        $razonSocial
+        $razonSocial,
+        $direccion
     ) {
         $sql = "UPDATE bodegueros
                 SET
@@ -200,7 +205,7 @@ class Bodeguero
                     ruc = :ruc,
                     tipo_establecimiento = :tipo_establecimiento,
                     nombre_comercial = :nombre_comercial,
-                    razon_social = :razon_social, tipo_establecimiento_otro = IF(:tipo_otro = 'OTRO', 'Establecimiento demo', NULL)
+                    razon_social = :razon_social, tipo_establecimiento_otro = IF(:tipo_otro = 'OTRO', 'Otro establecimiento', NULL)
                 WHERE bodeguero_id = :id";
 
         $stmt = $this->conexion->prepare($sql);
@@ -216,9 +221,13 @@ class Bodeguero
         $stmt->bindParam(":nombre_comercial", $nombreComercial);
         $stmt->bindParam(":razon_social", $razonSocial);
 
-        return $stmt->execute();
+        return $this->guardarConDireccion($stmt,$id,$direccion);
     }
-
+    private function guardarConDireccion($stmt,$id,$direccion) {
+        $own=!$this->conexion->inTransaction();if($own)$this->conexion->beginTransaction();
+        try { $ok=$stmt->execute();DireccionBodega::guardar($this->conexion,$id??$this->conexion->lastInsertId(),$direccion);if($own)$this->conexion->commit();return $ok; }
+        catch(Throwable $e){if($own && $this->conexion->inTransaction())$this->conexion->rollBack();throw $e;}
+    }
     public function bloquear($id)
     {
         $sql = "UPDATE bodegueros

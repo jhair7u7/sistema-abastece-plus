@@ -25,7 +25,12 @@ import Pago from "./pages/Pago";
 import AdminNavbar from "./components/AdminNavbar";
 
 function PageMotion() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const frame = window.requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"}));
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname, hash]);
 
   useLayoutEffect(() => {
     if ("scrollRestoration" in window.history)
@@ -80,7 +85,8 @@ function ApplicationShell() {
   const showAdminNavbar = isAdmin && pathname !== "/admin/login" && session?.type === "interno";
 
   return (
-    <>
+    <div className={showAdminNavbar ? "internal-shell" : undefined}>
+      {showAdminNavbar && <div className="internal-background" aria-hidden="true" />}
       {showAdminNavbar ? <AdminNavbar /> : !isAdmin && <Navbar />}
       {!isAdmin && <CartBar />}
       <Routes>
@@ -131,7 +137,7 @@ function ApplicationShell() {
             <Route path="*" element={<Home />} />
       </Routes>
       {!isAdmin && <Footer />}
-    </>
+    </div>
   );
 }
 
